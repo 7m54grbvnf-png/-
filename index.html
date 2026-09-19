@@ -10,7 +10,7 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:#f2f4f8; color:#1a1d29; padding-bottom:120px; }
+    background:#f2f4f8; color:#1a1d29; padding-bottom:130px; }
   header { background:#4a6cf7; color:#fff; padding:16px; position:sticky; top:0; z-index:10;
     box-shadow:0 2px 8px rgba(0,0,0,.1); }
   header h1 { margin:0; font-size:18px; font-weight:600; }
@@ -19,10 +19,13 @@
     background:rgba(255,255,255,.2); color:#fff; font-size:13px; font-weight:500; }
   .toolbar button:active { background:rgba(255,255,255,.35); }
 
+  .filters { display:flex; gap:6px; padding:10px 12px 4px; }
+  .filters button { flex:1; padding:9px 6px; border:1px solid #d1d5db; border-radius:8px;
+    background:#fff; font-size:13px; font-weight:600; color:#6b7280; }
+  .filters button.active { background:#4a6cf7; color:#fff; border-color:#4a6cf7; }
+
   .card { background:#fff; margin:12px; border-radius:12px; padding:14px;
     box-shadow:0 1px 3px rgba(0,0,0,.06); }
-  .card h2 { font-size:14px; margin:0 0 10px; color:#6b7280; text-transform:uppercase;
-    letter-spacing:.5px; font-weight:600; }
 
   .row-item { display:flex; justify-content:space-between; align-items:flex-start;
     padding:12px 0; border-bottom:1px solid #eef0f4; }
@@ -35,17 +38,18 @@
   .row-item .net { font-weight:700; color:#16a34a; font-size:15px; margin-top:2px; }
 
   .summary { position:fixed; bottom:0; left:0; right:0; background:#fff;
-    padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); z-index:10;
-    display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); z-index:10; }
+  .summary .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .summary .block { text-align:center; }
-  .summary .label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.3px; }
-  .summary .value { font-size:16px; font-weight:700; margin-top:2px; }
+  .summary .label { font-size:10px; color:#6b7280; text-transform:uppercase; letter-spacing:.3px; }
+  .summary .value { font-size:15px; font-weight:700; margin-top:2px; }
   .summary .value.gross { color:#1a1d29; }
   .summary .value.net { color:#16a34a; }
   .summary .block.full { grid-column: span 2; border-top:1px solid #eef0f4; padding-top:8px; }
   .summary .block.full .value { font-size:20px; }
+  .summary .filter-note { text-align:center; font-size:11px; color:#6b7280; margin-bottom:6px; }
 
-  .fab { position:fixed; right:20px; bottom:120px; width:56px; height:56px;
+  .fab { position:fixed; right:20px; bottom:140px; width:56px; height:56px;
     border-radius:28px; background:#4a6cf7; color:#fff; border:none; font-size:28px;
     box-shadow:0 4px 14px rgba(74,108,247,.5); z-index:11; }
 
@@ -85,23 +89,32 @@
   </div>
 </header>
 
+<div class="filters">
+  <button id="fAll"    onclick="setFilter('all')">Все</button>
+  <button id="fHours"  onclick="setFilter('hours')">⏱ Часы</button>
+  <button id="fSales"  onclick="setFilter('sales')">💵 Продажи</button>
+</div>
+
 <div id="list"></div>
-<div class="empty" id="empty">Нет записей. Нажмите + чтобы добавить.</div>
+<div class="empty" id="empty">Нет записей в этом разделе. Нажмите + чтобы добавить.</div>
 
 <button class="fab" onclick="openEdit()">+</button>
 
 <div class="summary">
-  <div class="block">
-    <div class="label">До вычета 13%</div>
-    <div class="value gross" id="totalGross">0 ₽</div>
-  </div>
-  <div class="block">
-    <div class="label">После вычета 13%</div>
-    <div class="value net" id="totalNet">0 ₽</div>
-  </div>
-  <div class="block full">
-    <div class="label">Всего к получению (на руки)</div>
-    <div class="value net" id="grandTotal">0 ₽</div>
+  <div class="filter-note" id="filterNote"></div>
+  <div class="grid">
+    <div class="block">
+      <div class="label">До вычета 13%</div>
+      <div class="value gross" id="totalGross">0 ₽</div>
+    </div>
+    <div class="block">
+      <div class="label">После вычета 13%</div>
+      <div class="value net" id="totalNet">0 ₽</div>
+    </div>
+    <div class="block full">
+      <div class="label">Всего к получению (на руки)</div>
+      <div class="value net" id="grandTotal">0 ₽</div>
+    </div>
   </div>
 </div>
 
@@ -143,34 +156,27 @@
 // ========================
 //  КОНСТАНТЫ
 // ========================
-const HOURLY_RATE = 825;      // ₽ за час
-const TAX = 0.13;             // 13%
+const HOURLY_RATE = 825;
+const TAX = 0.13;
 
 // ========================
 //  ДАННЫЕ
 // ========================
 let data = JSON.parse(localStorage.getItem('earningsData') || '[]');
 let editIndex = null;
+let currentFilter = localStorage.getItem('earningsFilter') || 'all';
 
 // ========================
 //  ФОРМУЛЫ
 // ========================
-
-// Прогрессивная шкала для продаж:
-// до 300 000 → 0%
-// от 300 000 до 700 000 → 5%
-// от 700 000 и выше → 10%
 function salesPercent(amount) {
   if (amount < 300000) return 0;
   if (amount < 700000) return 0.05;
   return 0.10;
 }
 
-// Расчёт одной записи. Возвращает {gross, net, info}
 function calcRecord(rec) {
-  let gross = 0;
-  let info = '';
-
+  let gross = 0, info = '';
   if (rec.type === 'hours') {
     const h = +rec.hours || 0;
     gross = h * HOURLY_RATE;
@@ -181,7 +187,6 @@ function calcRecord(rec) {
     gross = s * p;
     info = `Продажи ${fmt(s)} ₽ → ${(p*100).toFixed(0)}%`;
   }
-
   const net = gross * (1 - TAX);
   return { gross, net, info };
 }
@@ -194,11 +199,23 @@ function fmt(n) {
     minimumFractionDigits: 2, maximumFractionDigits: 2
   });
 }
-function fmtInt(n) {
-  return Math.round(n).toLocaleString('ru-RU');
-}
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ========================
+//  ФИЛЬТР
+// ========================
+function setFilter(f) {
+  currentFilter = f;
+  localStorage.setItem('earningsFilter', f);
+  render();
+}
+
+function updateFilterButtons() {
+  document.getElementById('fAll').classList.toggle('active', currentFilter === 'all');
+  document.getElementById('fHours').classList.toggle('active', currentFilter === 'hours');
+  document.getElementById('fSales').classList.toggle('active', currentFilter === 'sales');
 }
 
 // ========================
@@ -207,11 +224,32 @@ function escapeHtml(s) {
 function persist() { localStorage.setItem('earningsData', JSON.stringify(data)); }
 
 function render() {
+  updateFilterButtons();
+
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
   list.innerHTML = '';
 
-  if (data.length === 0) {
+  // Фильтруем записи
+  const visible = data
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => currentFilter === 'all' || r.type === currentFilter);
+
+  // Считаем итоги ТОЛЬКО по видимым записям
+  let sumGross = 0, sumNet = 0;
+  visible.forEach(({ r }) => {
+    const { gross, net } = calcRecord(r);
+    sumGross += gross;
+    sumNet += net;
+  });
+
+  // Заголовок над итогами — какой фильтр сейчас
+  const note = document.getElementById('filterNote');
+  if (currentFilter === 'all') note.textContent = 'Показаны ВСЕ записи';
+  else if (currentFilter === 'hours') note.textContent = 'Показаны только ЧАСЫ';
+  else note.textContent = 'Показаны только ПРОДАЖИ';
+
+  if (visible.length === 0) {
     empty.style.display = 'block';
     document.getElementById('totalGross').textContent = '0 ₽';
     document.getElementById('totalNet').textContent = '0 ₽';
@@ -220,14 +258,10 @@ function render() {
   }
   empty.style.display = 'none';
 
-  let sumGross = 0, sumNet = 0;
-
-  data.forEach((r, i) => {
+  visible.forEach(({ r, i }) => {
     const { gross, net, info } = calcRecord(r);
-    sumGross += gross;
-    sumNet += net;
-
     const isHours = r.type === 'hours';
+
     const div = document.createElement('div');
     div.className = 'row-item';
     div.innerHTML = `
@@ -257,7 +291,15 @@ function render() {
 // ========================
 function openEdit(idx = null) {
   editIndex = idx;
-  const r = idx !== null ? data[idx] : { type:'hours', client:'', hours:0, sales:0 };
+
+  // Если добавляем новую запись — подставляем тип по текущему фильтру
+  let defaultType = 'hours';
+  if (idx === null) {
+    if (currentFilter === 'hours' || currentFilter === 'sales') defaultType = currentFilter;
+  }
+
+  const r = idx !== null ? data[idx] : { type: defaultType, client:'', hours:0, sales:0 };
+
   document.getElementById('modalTitle').textContent = idx !== null ? 'Редактирование' : 'Новая запись';
   document.getElementById('inpType').value = r.type || 'hours';
   document.getElementById('inpClient').value = r.client || '';
@@ -265,7 +307,6 @@ function openEdit(idx = null) {
   document.getElementById('inpSales').value = r.sales || 0;
   document.getElementById('btnDelete').style.display = idx !== null ? 'block' : 'none';
   toggleTypeFields();
-  updateHint();
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -296,13 +337,11 @@ function saveRecord() {
   if (type === 'hours') {
     const h = parseFloat(document.getElementById('inpHours').value.replace(',', '.')) || 0;
     if (h < 0) { alert('Часы не могут быть отрицательными'); return; }
-    rec.hours = h;
-    rec.sales = 0;
+    rec.hours = h; rec.sales = 0;
   } else {
     const s = parseFloat(document.getElementById('inpSales').value.replace(',', '.')) || 0;
     if (s < 0) { alert('Сумма не может быть отрицательной'); return; }
-    rec.sales = s;
-    rec.hours = 0;
+    rec.sales = s; rec.hours = 0;
   }
 
   if (editIndex !== null) data[editIndex] = rec;
@@ -332,7 +371,6 @@ function loadExcel() { document.getElementById('fileInput').click(); }
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = evt => {
     try {
@@ -355,11 +393,8 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
           else if (k.includes('продаж') || k.includes('sales') || k.includes('сумма'))
             sales = parseFloat(v) || 0;
         }
-        // Автоопределение типа, если не указан
         if (!type) type = sales > 0 ? 'sales' : 'hours';
-        if (client || hours || sales) {
-          newData.push({ type, client: client || '—', hours, sales });
-        }
+        if (client || hours || sales) newData.push({ type, client: client || '—', hours, sales });
       });
 
       if (!newData.length) {
@@ -413,3 +448,4 @@ document.getElementById('overlay').addEventListener('click', e => {
 render();
 </script>
 </body>
+</html>
