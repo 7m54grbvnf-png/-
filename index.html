@@ -2,147 +2,640 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#4a6cf7">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Учёт заработка</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
+  :root {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface-2: #fafbfc;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
+    --primary: #4a6cf7;
+    --primary-soft: #eef2ff;
+    --success: #10b981;
+    --success-soft: #d1fae5;
+    --warning: #f59e0b;
+    --warning-soft: #fef3c7;
+    --danger: #ef4444;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
+    --shadow-md: 0 4px 12px rgba(15,23,42,.08);
+    --shadow-lg: 0 10px 30px rgba(15,23,42,.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1020;
+      --surface: #151b2e;
+      --surface-2: #1a2138;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      --primary: #6b8cff;
+      --primary-soft: #1e2749;
+      --success: #34d399;
+      --success-soft: #064e3b;
+      --warning: #fbbf24;
+      --warning-soft: #78350f;
+      --border: #273049;
+    }
+  }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:#f2f4f8; color:#1a1d29; padding-bottom:150px; font-size:14px; }
-  header { background:#4a6cf7; color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10;
-    box-shadow:0 2px 8px rgba(0,0,0,.1); }
-  header h1 { margin:0; font-size:17px; font-weight:600; }
-  .toolbar { display:flex; gap:6px; margin-top:10px; }
-  .toolbar button { flex:1; padding:9px 6px; border:none; border-radius:8px;
-    background:rgba(255,255,255,.2); color:#fff; font-size:12px; font-weight:500; }
-  .toolbar button:active { background:rgba(255,255,255,.35); }
+  html, body { margin:0; padding:0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    padding-bottom: 180px;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; cursor: pointer; }
 
-  .tabs { display:flex; background:#fff; border-bottom:1px solid #e5e7eb;
-    position:sticky; top:0; z-index:9; }
-  .tabs button { flex:1; padding:12px 4px; border:none; background:none;
-    font-size:12px; font-weight:600; color:#6b7280; border-bottom:2px solid transparent; }
-  .tabs button.active { color:#4a6cf7; border-bottom-color:#4a6cf7; }
+  /* ============ HEADER ============ */
+  .app-header {
+    background: linear-gradient(135deg, var(--primary) 0%, #7c5cff 100%);
+    color: #fff;
+    padding: 18px 16px 14px;
+    padding-top: calc(18px + env(safe-area-inset-top));
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 4px 20px rgba(74,108,247,.25);
+  }
+  .app-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .header-actions button {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255,255,255,.15);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background .15s, transform .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .header-actions button:active {
+    background: rgba(255,255,255,.3);
+    transform: scale(.97);
+  }
 
-  .sheet-meta { padding:10px 14px 4px; font-size:11px; color:#6b7280; }
-  .sheet-meta b { color:#1a1d29; }
+  /* ============ TABS ============ */
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    padding: 0 8px;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 14px 4px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+    position: relative;
+  }
+  .tabs button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .tabs button .badge {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 1px 6px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
 
-  .row-item { background:#fff; border-radius:10px; margin:8px 12px; padding:12px 14px;
-    box-shadow:0 1px 3px rgba(0,0,0,.06); }
-  .row-item .client { font-weight:600; font-size:14px; line-height:1.3; word-break:break-word; }
-  .row-item .meta { font-size:11px; color:#6b7280; margin-top:3px; }
-  .row-item .fields { margin-top:8px; display:grid;
-    grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; }
-  .row-item .fields .k { color:#9ca3af; }
-  .row-item .fields .v { color:#1a1d29; word-break:break-word; }
-  .row-item .amounts { margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb;
-    display:flex; justify-content:space-between; align-items:baseline; }
-  .row-item .gross { font-size:12px; color:#6b7280; }
-  .row-item .net { font-size:16px; font-weight:700; color:#16a34a; }
-  .row-item .net-label { font-size:10px; color:#6b7280; text-align:right; }
+  /* ============ HERO CARD (главный итог) ============ */
+  .hero {
+    margin: 14px 12px 8px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 20px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, var(--primary-soft) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .hero-amount {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--success);
+    line-height: 1.1;
+  }
+  .hero-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .hero-grid .item .lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-bottom: 3px;
+  }
+  .hero-grid .item .val {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
 
-  .summary { position:fixed; bottom:0; left:0; right:0; background:#fff;
-    padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); z-index:10; }
-  .summary .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .summary .block { text-align:center; }
-  .summary .label { font-size:10px; color:#6b7280; text-transform:uppercase; letter-spacing:.3px; }
-  .summary .value { font-size:15px; font-weight:700; margin-top:2px; }
-  .summary .value.gross { color:#1a1d29; }
-  .summary .value.net { color:#16a34a; }
-  .summary .block.full { grid-column: span 2; border-top:1px solid #eef0f4; padding-top:8px; }
-  .summary .block.full .value { font-size:20px; }
-  .summary .filter-note { text-align:center; font-size:11px; color:#6b7280; margin-bottom:6px; }
+  /* ============ PROGRESS BAR (прогресс до след. порога) ============ */
+  .progress-card {
+    margin: 12px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
+  .progress-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .progress-head .left { color: var(--text-muted); }
+  .progress-head .right { font-weight: 700; color: var(--primary); }
+  .progress-track {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), #7c5cff);
+    border-radius: 4px;
+    transition: width .4s ease;
+  }
+  .progress-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  .progress-note b { color: var(--text); }
 
-  .fab { position:fixed; right:20px; bottom:160px; width:56px; height:56px;
-    border-radius:28px; background:#4a6cf7; color:#fff; border:none; font-size:28px;
-    box-shadow:0 4px 14px rgba(74,108,247,.5); z-index:11; }
+  /* ============ SEARCH ============ */
+  .search-wrap {
+    margin: 12px 12px 6px;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 11px 14px 11px 38px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search-wrap input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .search-wrap::before {
+    content: '🔍';
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: .5;
+  }
 
-  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
-    align-items:center; justify-content:center; z-index:100; padding:16px; }
-  .overlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:420px;
-    max-height:92vh; overflow-y:auto; }
-  .modal h2 { margin:0 0 14px; font-size:17px; }
-  .modal label { display:block; font-size:12px; color:#6b7280; margin-bottom:4px; margin-top:10px; }
-  .modal input, .modal select, .modal textarea { width:100%; padding:10px; border:1px solid #d1d5db;
-    border-radius:8px; font-size:15px; background:#fff; font-family:inherit; }
-  .modal input:focus, .modal select:focus { outline:none; border-color:#4a6cf7; }
-  .modal-buttons { display:flex; gap:8px; margin-top:18px; }
-  .modal-buttons button { flex:1; padding:12px; border-radius:8px; border:none;
-    font-size:15px; font-weight:600; }
-  .btn-primary { background:#4a6cf7; color:#fff; }
-  .btn-danger { background:#ef4444; color:#fff; }
-  .btn-secondary { background:#e5e7eb; color:#1a1d29; }
+  /* ============ ROW ITEM ============ */
+  .list-wrap { padding: 6px 0; }
+  .row {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    margin: 6px 12px;
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .1s, box-shadow .15s;
+    cursor: pointer;
+  }
+  .row:active {
+    transform: scale(.985);
+    box-shadow: var(--shadow-md);
+  }
+  .row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .row-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.35;
+    word-break: break-word;
+    flex: 1;
+  }
+  .row-sum {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .row-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+  .row-meta .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--surface-2);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .row-bottom {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .row-bottom .share {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .row-bottom .net {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--success);
+  }
+  .row-bottom .net-lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
 
-  .empty { text-align:center; color:#9ca3af; padding:50px 20px; font-size:14px; }
+  /* ============ FAB ============ */
+  .fab {
+    position: fixed;
+    right: 20px;
+    bottom: 170px;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, var(--primary), #7c5cff);
+    color: #fff;
+    border: none;
+    font-size: 26px;
+    font-weight: 300;
+    box-shadow: 0 8px 24px rgba(74,108,247,.45);
+    z-index: 25;
+    transition: transform .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding-bottom: 3px;
+  }
+  .fab:active { transform: scale(.9); }
 
-  /* Сводная таблица на вкладке Итого */
-  .report { margin:12px; background:#fff; border-radius:12px; padding:16px;
-    box-shadow:0 1px 3px rgba(0,0,0,.06); }
-  .report h3 { font-size:13px; color:#6b7280; text-transform:uppercase; margin:0 0 12px;
-    letter-spacing:.5px; font-weight:600; }
-  .report table { width:100%; border-collapse:collapse; font-size:13px; }
-  .report td { padding:8px 0; border-bottom:1px solid #eef0f4; }
-  .report td:last-child { text-align:right; font-weight:600; }
-  .report tr:last-child td { border-bottom:none; }
-  .report .grand { padding-top:12px; margin-top:8px; border-top:2px solid #4a6cf7; }
-  .report .grand td { font-size:16px; font-weight:700; color:#16a34a; padding-top:12px; }
-  .report .gross-val { color:#6b7280; font-weight:600; }
+  /* ============ BOTTOM BAR ============ */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    box-shadow: 0 -4px 20px rgba(15,23,42,.08);
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 20;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .bottom-bar .cell {
+    text-align: center;
+  }
+  .bottom-bar .cell .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 600;
+  }
+  .bottom-bar .cell .val {
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .bottom-bar .cell.gross .val { color: var(--text); }
+  .bottom-bar .cell.net .val { color: var(--success); }
+  .bottom-bar .full {
+    grid-column: span 2;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    text-align: center;
+  }
+  .bottom-bar .full .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 600;
+  }
+  .bottom-bar .full .val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--success);
+    margin-top: 2px;
+    letter-spacing: -0.5px;
+  }
+
+  /* ============ EMPTY ============ */
+  .empty {
+    text-align: center;
+    padding: 60px 30px;
+    color: var(--text-light);
+  }
+  .empty .icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: .5;
+  }
+  .empty .title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .empty .desc {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ============ MODAL ============ */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,.55);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn .2s;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 22px 22px 0 0;
+    padding: 8px 20px 20px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    animation: slideUp .25s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin: 8px auto 16px;
+  }
+  .modal h2 {
+    margin: 0 0 18px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .modal label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    margin-top: 14px;
+    font-weight: 600;
+  }
+  .modal input, .modal select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .modal input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .modal-buttons button {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    transition: transform .1s, opacity .15s;
+  }
+  .modal-buttons button:active { transform: scale(.97); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; flex: 0 0 auto; padding-left: 18px; padding-right: 18px; }
+  .btn-secondary { background: var(--surface-2); color: var(--text); }
+
+  /* ============ SUMMARY TAB ============ */
+  .summary-section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    margin: 12px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .summary-section h3 {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .summary-section table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .summary-section td {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .summary-section td:last-child {
+    text-align: right;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .summary-section tr:last-child td { border-bottom: none; }
+  .summary-section .grand {
+    padding-top: 14px;
+    margin-top: 10px;
+    border-top: 2px solid var(--primary);
+  }
+  .summary-section .grand td {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--success);
+    padding-top: 14px;
+  }
+
+  /* ============ ANIMATIONS ============ */
+  .fade-in { animation: fadeInUp .3s ease; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
 
-<header>
+<header class="app-header">
   <h1>💰 Учёт заработка</h1>
-  <div class="toolbar">
-    <button onclick="loadExcel()">📂 Открыть Excel</button>
-    <button onclick="saveExcel()">💾 Сохранить Excel</button>
-    <button onclick="clearAll()">🗑 Очистить</button>
+  <div class="header-actions">
+    <button onclick="loadExcel()">📂 Открыть</button>
+    <button onclick="saveExcel()">💾 Excel</button>
+    <button onclick="backupJSON()">⬇ Резерв</button>
+    <button onclick="menuMore()">⋯ Ещё</button>
   </div>
 </header>
 
 <div class="tabs">
-  <button id="tabSales" onclick="setTab('sales')">💵 Продажи</button>
-  <button id="tabHours" onclick="setTab('hours')">⏱ Часы</button>
+  <button id="tabSales" onclick="setTab('sales')">💵 Продажи <span class="badge" id="badgeSales">0</span></button>
+  <button id="tabHours" onclick="setTab('hours')">⏱ Часы <span class="badge" id="badgeHours">0</span></button>
   <button id="tabSummary" onclick="setTab('summary')">📊 Итого</button>
 </div>
 
 <div id="content"></div>
 
-<button class="fab" id="fab" onclick="openEdit()">+</button>
+<button class="fab" id="fab" onclick="openEdit()">＋</button>
 
-<div class="summary" id="summaryBar">
-  <div class="filter-note" id="filterNote"></div>
-  <div class="grid">
-    <div class="block">
-      <div class="label">До вычета 13%</div>
-      <div class="value gross" id="totalGross">0 ₽</div>
-    </div>
-    <div class="block">
-      <div class="label">После вычета 13%</div>
-      <div class="value net" id="totalNet">0 ₽</div>
-    </div>
-    <div class="block full">
-      <div class="label">Всего к получению (на руки)</div>
-      <div class="value net" id="grandTotal">0 ₽</div>
-    </div>
+<div class="bottom-bar" id="bottomBar">
+  <div class="cell gross">
+    <div class="lbl">До вычета 13%</div>
+    <div class="val" id="totalGross">0 ₽</div>
+  </div>
+  <div class="cell net">
+    <div class="lbl">После вычета</div>
+    <div class="val" id="totalNet">0 ₽</div>
+  </div>
+  <div class="full">
+    <div class="lbl">На руки</div>
+    <div class="val" id="grandTotal">0 ₽</div>
   </div>
 </div>
 
 <div class="overlay" id="overlay">
-  <div class="modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
     <h2 id="modalTitle">Новая запись</h2>
     <div id="modalFields"></div>
     <div class="modal-buttons">
+      <button class="btn-danger" id="btnDelete" onclick="deleteCurrent()" style="display:none">🗑</button>
       <button class="btn-secondary" onclick="closeModal()">Отмена</button>
-      <button class="btn-danger" id="btnDelete" onclick="deleteCurrent()" style="display:none">Удалить</button>
       <button class="btn-primary" onclick="saveRecord()">Сохранить</button>
     </div>
   </div>
 </div>
 
-<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+<input type="file" id="fileInputExcel" accept=".xlsx,.xls" style="display:none">
+<input type="file" id="fileInputJSON" accept=".json" style="display:none">
 
 <script>
 // ========================
@@ -151,24 +644,29 @@
 const HOURLY_RATE = 825;
 const TAX = 0.13;
 
-// Прогрессивная шкала для продаж:
-// до 300 000 — 0%, от 300 000 до 700 000 — 5%, от 700 000 — 10%
-function salesPercent(amount) {
-  if (amount < 300000) return 0;
-  if (amount < 700000) return 0.05;
-  return 0.10;
+// Шкала продаж: до 300к → 0%, 300к–700к → 5%, от 700к → 10%
+const SALES_TIERS = [
+  { min: 0,      max: 300000,  percent: 0,  label: 'до 300 000' },
+  { min: 300000, max: 700000,  percent: 5,  label: '300 000 – 700 000' },
+  { min: 700000, max: Infinity, percent: 10, label: 'от 700 000' }
+];
+
+function salesPercentByTurnover(turnover) {
+  for (const t of SALES_TIERS) {
+    if (turnover >= t.min && turnover < t.max) return t.percent;
+  }
+  return 10;
 }
 
 // ========================
 //  ДАННЫЕ
 // ========================
-// Продажи: [{org, inn, kpp, sum, product}, ...]
-// Часы:    [{org, inn, kpp, stage, status, hours, link}, ...]
-let salesData = [];
-let hoursData = [];
+let salesData = [];   // [{org, inn, kpp, sum, product}]
+let hoursData = [];   // [{org, inn, kpp, stage, status, hours, link}]
 let currentTab = 'sales';
 let editIndex = null;
 let editType = 'sales';
+let searchQuery = '';
 
 // ========================
 //  УТИЛИТЫ
@@ -186,32 +684,38 @@ function escapeHtml(s) {
     {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
   ));
 }
-
-// Расчёт заработка с продажи
-function calcSale(sum) {
-  const s = +sum || 0;
-  const p = salesPercent(s);
-  const gross = s * p;
-  const net = gross * (1 - TAX);
-  return { gross, net, percent: p };
-}
-// Расчёт заработка с часов
-function calcHours(h) {
-  const hours = +h || 0;
-  const gross = hours * HOURLY_RATE;
-  const net = gross * (1 - TAX);
-  return { gross, net };
+function toast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:200px;left:50%;transform:translateX(-50%);
+    background:rgba(15,23,42,.9);color:#fff;padding:10px 18px;border-radius:20px;
+    font-size:13px;z-index:999;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);
+    animation:fadeInUp .25s;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
 }
 
 // ========================
 //  ИТОГИ
 // ========================
-function totals() {
-  let salesGross = 0, salesNet = 0, hoursGross = 0, hoursNet = 0, totalHours = 0;
-  salesData.forEach(r => { const c = calcSale(r.sum); salesGross += c.gross; salesNet += c.net; });
-  hoursData.forEach(r => { const c = calcHours(r.hours); hoursGross += c.gross; hoursNet += c.net; totalHours += +r.hours || 0; });
-  return { salesGross, salesNet, hoursGross, hoursNet, totalHours,
-           allGross: salesGross + hoursGross, allNet: salesNet + hoursNet };
+function getTotals() {
+  // Продажи — вариант Б: общий оборот → один процент
+  const salesTurnover = salesData.reduce((a, r) => a + (+r.sum || 0), 0);
+  const salesPct = salesPercentByTurnover(salesTurnover);
+  const salesGross = salesTurnover * (salesPct / 100);
+  const salesNet = salesGross * (1 - TAX);
+
+  // Часы
+  const totalHours = hoursData.reduce((a, r) => a + (+r.hours || 0), 0);
+  const hoursGross = totalHours * HOURLY_RATE;
+  const hoursNet = hoursGross * (1 - TAX);
+
+  return {
+    salesTurnover, salesPct, salesGross, salesNet,
+    totalHours, hoursGross, hoursNet,
+    allGross: salesGross + hoursGross,
+    allNet: salesNet + hoursNet
+  };
 }
 
 // ========================
@@ -219,10 +723,11 @@ function totals() {
 // ========================
 function setTab(t) {
   currentTab = t;
+  searchQuery = '';
   document.getElementById('tabSales').classList.toggle('active', t === 'sales');
   document.getElementById('tabHours').classList.toggle('active', t === 'hours');
   document.getElementById('tabSummary').classList.toggle('active', t === 'summary');
-  document.getElementById('fab').style.display = t === 'summary' ? 'none' : 'block';
+  document.getElementById('fab').style.display = t === 'summary' ? 'none' : 'flex';
   render();
 }
 
@@ -230,152 +735,302 @@ function setTab(t) {
 //  ОТРИСОВКА
 // ========================
 function render() {
-  renderSummaryBar();
-  if (currentTab === 'sales') renderSalesList();
-  else if (currentTab === 'hours') renderHoursList();
-  else renderSummaryTab();
+  renderBadges();
+  renderBottomBar();
+  const c = document.getElementById('content');
+
+  if (currentTab === 'summary') {
+    renderSummary(c);
+  } else {
+    renderList(c);
+  }
 }
 
-function renderSummaryBar() {
-  const t = totals();
-  const note = document.getElementById('filterNote');
+function renderBadges() {
+  document.getElementById('badgeSales').textContent = salesData.length;
+  document.getElementById('badgeHours').textContent = hoursData.length;
+}
 
+function renderBottomBar() {
+  const t = getTotals();
   if (currentTab === 'sales') {
-    note.textContent = 'Раздел: ПРОДАЖИ';
     document.getElementById('totalGross').textContent = fmt(t.salesGross) + ' ₽';
     document.getElementById('totalNet').textContent = fmt(t.salesNet) + ' ₽';
     document.getElementById('grandTotal').textContent = fmt(t.salesNet) + ' ₽';
   } else if (currentTab === 'hours') {
-    note.textContent = 'Раздел: ЧАСЫ (' + t.totalHours.toFixed(2) + ' ч)';
     document.getElementById('totalGross').textContent = fmt(t.hoursGross) + ' ₽';
     document.getElementById('totalNet').textContent = fmt(t.hoursNet) + ' ₽';
     document.getElementById('grandTotal').textContent = fmt(t.hoursNet) + ' ₽';
   } else {
-    note.textContent = 'ОБЩИЙ ИТОГ по всем разделам';
     document.getElementById('totalGross').textContent = fmt(t.allGross) + ' ₽';
     document.getElementById('totalNet').textContent = fmt(t.allNet) + ' ₽';
     document.getElementById('grandTotal').textContent = fmt(t.allNet) + ' ₽';
   }
 }
 
-// ---------- Вкладка Продажи ----------
-function renderSalesList() {
-  const c = document.getElementById('content');
-  if (!salesData.length) {
-    c.innerHTML = '<div class="empty">Нет записей о продажах.<br>Нажмите + или 📂 Открыть Excel.</div>';
-    return;
-  }
-  c.innerHTML = '';
-  salesData.forEach((r, i) => {
-    const { gross, net, percent } = calcSale(r.sum);
-    const div = document.createElement('div');
-    div.className = 'row-item';
-    div.innerHTML = `
-      <div class="client">${escapeHtml(r.org || '—')}</div>
-      ${r.inn ? `<div class="meta">ИНН/КПП: ${escapeHtml(r.inn)}${r.kpp ? '-' + escapeHtml(r.kpp) : ''}</div>` : ''}
-      <div class="fields">
-        <span class="k">Сумма:</span><span class="v">${fmtInt(r.sum)} ₽</span>
-        <span class="k">Продукт:</span><span class="v">${escapeHtml(r.product || '—')}</span>
-        <span class="k">Ваш %:</span><span class="v">${(percent*100).toFixed(0)}%</span>
+// ---------- Список ----------
+function renderList(c) {
+  const t = getTotals();
+  const isSales = currentTab === 'sales';
+  const data = isSales ? salesData : hoursData;
+
+  let html = '';
+
+  // HERO-карточка — главная цифра раздела
+  if (isSales) {
+    html += `
+      <div class="hero fade-in">
+        <div class="hero-label">Заработок с продаж — на руки</div>
+        <div class="hero-amount">${fmt(t.salesNet)} ₽</div>
+        <div class="hero-sub">с оборота ${fmtInt(t.salesTurnover)} ₽ по ставке ${t.salesPct}%</div>
+        <div class="hero-grid">
+          <div class="item">
+            <div class="lbl">Общий оборот</div>
+            <div class="val">${fmtInt(t.salesTurnover)} ₽</div>
+          </div>
+          <div class="item">
+            <div class="lbl">До вычета 13%</div>
+            <div class="val">${fmt(t.salesGross)} ₽</div>
+          </div>
+        </div>
       </div>
-      <div class="amounts">
-        <div class="gross">До вычета: ${fmt(gross)} ₽</div>
-        <div style="text-align:right">
-          <div class="net">${fmt(net)} ₽</div>
-          <div class="net-label">после 13%</div>
+      ${renderSalesProgress(t.salesTurnover)}
+    `;
+  } else {
+    html += `
+      <div class="hero fade-in">
+        <div class="hero-label">Заработок с часов — на руки</div>
+        <div class="hero-amount">${fmt(t.hoursNet)} ₽</div>
+        <div class="hero-sub">${t.totalHours.toFixed(2)} часов × ${HOURLY_RATE} ₽/ч</div>
+        <div class="hero-grid">
+          <div class="item">
+            <div class="lbl">Всего часов</div>
+            <div class="val">${t.totalHours.toFixed(2)}</div>
+          </div>
+          <div class="item">
+            <div class="lbl">До вычета 13%</div>
+            <div class="val">${fmt(t.hoursGross)} ₽</div>
+          </div>
         </div>
       </div>
     `;
-    div.onclick = () => openEdit(i, 'sales');
-    c.appendChild(div);
-  });
-}
-
-// ---------- Вкладка Часы ----------
-function renderHoursList() {
-  const c = document.getElementById('content');
-  if (!hoursData.length) {
-    c.innerHTML = '<div class="empty">Нет записей о часах.<br>Нажмите + или 📂 Открыть Excel.</div>';
-    return;
   }
-  c.innerHTML = '';
-  hoursData.forEach((r, i) => {
-    const { gross, net } = calcHours(r.hours);
-    const div = document.createElement('div');
-    div.className = 'row-item';
-    div.innerHTML = `
-      <div class="client">${escapeHtml(r.org || '—')}</div>
-      ${r.inn ? `<div class="meta">ИНН: ${escapeHtml(r.inn)}${r.kpp ? ', КПП: ' + escapeHtml(r.kpp) : ''}</div>` : ''}
-      <div class="fields">
-        ${r.stage ? `<span class="k">Этап:</span><span class="v">${escapeHtml(r.stage)}</span>` : ''}
-        ${r.status ? `<span class="k">Стадия:</span><span class="v">${escapeHtml(r.status)}</span>` : ''}
-        <span class="k">Часов:</span><span class="v">${r.hours}</span>
-        ${r.link ? `<span class="k">Ссылка:</span><span class="v" style="font-size:11px;color:#4a6cf7">${escapeHtml(r.link)}</span>` : ''}
-      </div>
-      <div class="amounts">
-        <div class="gross">До вычета: ${fmt(gross)} ₽</div>
-        <div style="text-align:right">
-          <div class="net">${fmt(net)} ₽</div>
-          <div class="net-label">после 13%</div>
-        </div>
+
+  // Поиск
+  if (data.length > 0) {
+    html += `
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Поиск по клиенту..."
+               value="${escapeHtml(searchQuery)}" oninput="onSearch(this.value)">
       </div>
     `;
-    div.onclick = () => openEdit(i, 'hours');
-    c.appendChild(div);
-  });
+  }
+
+  // Фильтруем по поиску
+  const filtered = data
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => {
+      if (!searchQuery) return true;
+      return (r.org || '').toLowerCase().includes(searchQuery.toLowerCase());
+    });
+
+  // Список
+  if (data.length === 0) {
+    html += renderEmpty(isSales);
+  } else if (filtered.length === 0) {
+    html += `<div class="empty"><div class="icon">🔍</div><div class="title">Ничего не найдено</div></div>`;
+  } else {
+    html += '<div class="list-wrap">';
+    filtered.forEach(({ r, i }) => {
+      html += isSales ? renderSalesRow(r, i, t) : renderHoursRow(r, i);
+    });
+    html += '</div>';
+  }
+
+  c.innerHTML = html;
+
+  // Восстанавливаем фокус
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput && searchQuery) {
+    searchInput.focus();
+    searchInput.setSelectionRange(searchQuery.length, searchQuery.length);
+  }
 }
 
-// ---------- Вкладка Итого ----------
-function renderSummaryTab() {
-  const t = totals();
-  const c = document.getElementById('content');
+function renderSalesProgress(turnover) {
+  // Определяем текущий порог и следующий
+  let currentTier = SALES_TIERS[0];
+  for (const t of SALES_TIERS) {
+    if (turnover >= t.min && turnover < t.max) { currentTier = t; break; }
+  }
+
+  // Если уже на максимуме — показываем максимум
+  if (currentTier.percent === 10) {
+    return `
+      <div class="progress-card">
+        <div class="progress-head">
+          <span class="left">Шкала продаж</span>
+          <span class="right">10% — максимум 🎉</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+        <div class="progress-note">Достигнут максимальный процент</div>
+      </div>
+    `;
+  }
+
+  // Следующий порог
+  const nextTier = SALES_TIERS.find(t => t.min > currentTier.min && t.percent > currentTier.percent);
+  const nextThreshold = nextTier ? nextTier.min : currentTier.max;
+  const needed = nextThreshold - turnover;
+  const totalSpan = currentTier.max - currentTier.min;
+  const done = turnover - currentTier.min;
+  const percent = Math.max(0, Math.min(100, (done / totalSpan) * 100));
+
+  return `
+    <div class="progress-card">
+      <div class="progress-head">
+        <span class="left">Ваша ставка: <b>${currentTier.percent}%</b></span>
+        <span class="right">${percent.toFixed(0)}%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+      <div class="progress-note">
+        До ставки <b>${nextTier.percent}%</b> осталось продать <b>${fmtInt(needed)} ₽</b>
+      </div>
+    </div>
+  `;
+}
+
+function renderSalesRow(r, i, t) {
+  const sum = +r.sum || 0;
+  const share = t.salesTurnover > 0 ? (sum / t.salesTurnover * 100) : 0;
+  const meta = [];
+  if (r.inn) meta.push(`ИНН ${escapeHtml(r.inn)}${r.kpp ? '/' + escapeHtml(r.kpp) : ''}`);
+  if (r.product) meta.push(`<span class="pill">${escapeHtml(r.product)}</span>`);
+
+  return `
+    <div class="row fade-in" onclick="openEdit(${i}, 'sales')">
+      <div class="row-head">
+        <div class="row-title">${escapeHtml(r.org || '—')}</div>
+        <div class="row-sum">${fmtInt(sum)} ₽</div>
+      </div>
+      ${meta.length ? `<div class="row-meta">${meta.join(' ')}</div>` : ''}
+      <div class="row-bottom">
+        <span class="share">${share.toFixed(1)}% от оборота</span>
+        <span><span class="net-lbl">вклад в заработок:</span> <span class="net">${fmt(sum * t.salesPct / 100 * (1 - TAX))} ₽</span></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderHoursRow(r, i) {
+  const h = +r.hours || 0;
+  const net = h * HOURLY_RATE * (1 - TAX);
+  const meta = [];
+  if (r.inn) meta.push(`ИНН ${escapeHtml(r.inn)}${r.kpp ? '/' + escapeHtml(r.kpp) : ''}`);
+  if (r.stage) meta.push(`<span class="pill">${escapeHtml(r.stage)}</span>`);
+  if (r.status) meta.push(`<span class="pill">${escapeHtml(r.status)}</span>`);
+
+  return `
+    <div class="row fade-in" onclick="openEdit(${i}, 'hours')">
+      <div class="row-head">
+        <div class="row-title">${escapeHtml(r.org || '—')}</div>
+        <div class="row-sum">${h} ч</div>
+      </div>
+      ${meta.length ? `<div class="row-meta">${meta.join(' ')}</div>` : ''}
+      <div class="row-bottom">
+        <span class="share">${h} × ${HOURLY_RATE} ₽</span>
+        <span class="net">${fmt(net)} ₽</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderEmpty(isSales) {
+  return `
+    <div class="empty">
+      <div class="icon">${isSales ? '💵' : '⏱'}</div>
+      <div class="title">Пока пусто</div>
+      <div class="desc">
+        Нажмите <b>＋</b> чтобы добавить запись<br>
+        или <b>📂 Открыть</b> чтобы загрузить Excel
+      </div>
+    </div>
+  `;
+}
+
+// ---------- Сводная вкладка ----------
+function renderSummary(c) {
+  const t = getTotals();
   c.innerHTML = `
-    <div class="report">
+    <div class="summary-section fade-in">
       <h3>💵 Продажи</h3>
       <table>
-        <tr><td>Клиентов в списке</td><td>${salesData.length}</td></tr>
-        <tr><td>Заработок до 13%</td><td class="gross-val">${fmt(t.salesGross)} ₽</td></tr>
-        <tr><td>Заработок после 13%</td><td style="color:#16a34a">${fmt(t.salesNet)} ₽</td></tr>
+        <tr><td>Клиентов</td><td>${salesData.length}</td></tr>
+        <tr><td>Общий оборот</td><td>${fmtInt(t.salesTurnover)} ₽</td></tr>
+        <tr><td>Ваша ставка</td><td>${t.salesPct}%</td></tr>
+        <tr><td>До вычета 13%</td><td>${fmt(t.salesGross)} ₽</td></tr>
+        <tr><td>На руки</td><td style="color:var(--success)">${fmt(t.salesNet)} ₽</td></tr>
       </table>
     </div>
 
-    <div class="report">
+    <div class="summary-section fade-in">
       <h3>⏱ Часы</h3>
       <table>
         <tr><td>Записей</td><td>${hoursData.length}</td></tr>
         <tr><td>Всего часов</td><td>${t.totalHours.toFixed(2)}</td></tr>
-        <tr><td>Ставка за час</td><td>${HOURLY_RATE} ₽</td></tr>
-        <tr><td>Заработок до 13%</td><td class="gross-val">${fmt(t.hoursGross)} ₽</td></tr>
-        <tr><td>Заработок после 13%</td><td style="color:#16a34a">${fmt(t.hoursNet)} ₽</td></tr>
+        <tr><td>Ставка</td><td>${HOURLY_RATE} ₽/ч</td></tr>
+        <tr><td>До вычета 13%</td><td>${fmt(t.hoursGross)} ₽</td></tr>
+        <tr><td>На руки</td><td style="color:var(--success)">${fmt(t.hoursNet)} ₽</td></tr>
       </table>
     </div>
 
-    <div class="report">
+    <div class="summary-section fade-in">
       <h3>📊 Общий итог</h3>
       <table>
-        <tr><td>Всего до 13%</td><td class="gross-val">${fmt(t.allGross)} ₽</td></tr>
-        <tr class="grand"><td>На руки (после 13%)</td><td>${fmt(t.allNet)} ₽</td></tr>
+        <tr><td>Всего до 13%</td><td>${fmt(t.allGross)} ₽</td></tr>
+        <tr><td>Налог 13%</td><td>−${fmt(t.allGross * TAX)} ₽</td></tr>
+        <tr class="grand"><td>На руки</td><td>${fmt(t.allNet)} ₽</td></tr>
+      </table>
+    </div>
+
+    <div class="summary-section fade-in">
+      <h3>🛠 Действия</h3>
+      <table>
+        <tr onclick="backupJSON()" style="cursor:pointer"><td>⬇ Скачать резервную копию (JSON)</td><td>→</td></tr>
+        <tr onclick="restoreJSON()" style="cursor:pointer"><td>⬆ Загрузить резервную копию</td><td>→</td></tr>
+        <tr onclick="clearAll()" style="cursor:pointer"><td style="color:var(--danger)">🗑 Удалить все данные</td><td>→</td></tr>
       </table>
     </div>
   `;
 }
 
 // ========================
+//  ПОИСК
+// ========================
+function onSearch(v) {
+  searchQuery = v;
+  const c = document.getElementById('content');
+  renderList(c);
+}
+
+// ========================
 //  МОДАЛЬНОЕ ОКНО
 // ========================
 const SALES_FIELDS = [
-  { key: 'org',     label: 'Организация (название + ИНН/КПП)', type: 'text', required: true },
-  { key: 'sum',     label: 'Сумма оплаты, ₽',                 type: 'number' },
-  { key: 'product', label: 'Продукт',                          type: 'text' }
+  { key: 'org',     label: 'Организация',           type: 'text',   placeholder: 'ООО "Ромашка"' },
+  { key: 'inn',     label: 'ИНН',                   type: 'text',   placeholder: '5001051656' },
+  { key: 'kpp',     label: 'КПП',                   type: 'text',   placeholder: '500101001' },
+  { key: 'sum',     label: 'Сумма оплаты, ₽',       type: 'number', placeholder: '210000' },
+  { key: 'product', label: 'Продукт',               type: 'text',   placeholder: 'Логистика, внедрение' }
 ];
 const HOURS_FIELDS = [
-  { key: 'org',    label: 'Организация',          type: 'text', required: true },
-  { key: 'inn',    label: 'ИНН',                  type: 'text' },
-  { key: 'kpp',    label: 'КПП',                  type: 'text' },
-  { key: 'stage',  label: 'Этап',                 type: 'text' },
-  { key: 'status', label: 'Стадия внедрения',     type: 'text' },
-  { key: 'hours',  label: 'Кол-во часов',         type: 'number' },
-  { key: 'link',   label: 'Ссылка ютрек',         type: 'text' }
+  { key: 'org',    label: 'Организация',       type: 'text',   placeholder: 'ООО "Ромашка"', required: true },
+  { key: 'inn',    label: 'ИНН',               type: 'text',   placeholder: '5001051656' },
+  { key: 'kpp',    label: 'КПП',               type: 'text',   placeholder: '500101001' },
+  { key: 'stage',  label: 'Этап',              type: 'text',   placeholder: 'Анализ ЭТРН' },
+  { key: 'status', label: 'Стадия внедрения',  type: 'text',   placeholder: 'Завершено полностью' },
+  { key: 'hours',  label: 'Кол-во часов',      type: 'number', placeholder: '10' },
+  { key: 'link',   label: 'Ссылка ютрек',      type: 'text',   placeholder: 'https://...' }
 ];
 
 function openEdit(idx = null, type = null) {
@@ -386,20 +1041,24 @@ function openEdit(idx = null, type = null) {
   const rec = idx !== null ? data[idx] : {};
 
   document.getElementById('modalTitle').textContent =
-    (idx !== null ? 'Редактирование: ' : 'Новая запись: ') +
-    (editType === 'sales' ? 'Продажа' : 'Часы');
+    (idx !== null ? 'Редактирование' : 'Новая запись') + ' · ' +
+    (editType === 'sales' ? '💵 Продажа' : '⏱ Часы');
 
   document.getElementById('modalFields').innerHTML = fields.map(f => `
     <label>${f.label}${f.required ? ' *' : ''}</label>
-    <input id="f_${f.key}" type="${f.type}" ${f.type === 'number' ? 'step="0.01" inputmode="decimal"' : ''}
-           value="${escapeHtml(rec[f.key] != null ? rec[f.key] : (f.type === 'number' ? '0' : ''))}">
+    <input id="f_${f.key}" type="${f.type}"
+           ${f.type === 'number' ? 'step="0.01" inputmode="decimal"' : ''}
+           placeholder="${f.placeholder || ''}"
+           value="${escapeHtml(rec[f.key] != null ? rec[f.key] : (f.type === 'number' ? '' : ''))}">
   `).join('');
 
   document.getElementById('btnDelete').style.display = idx !== null ? 'block' : 'none';
   document.getElementById('overlay').classList.add('show');
 }
 
-function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+}
 
 function saveRecord() {
   const fields = editType === 'sales' ? SALES_FIELDS : HOURS_FIELDS;
@@ -409,7 +1068,7 @@ function saveRecord() {
   for (const f of fields) {
     let v = document.getElementById('f_' + f.key).value.trim();
     if (f.type === 'number') v = parseFloat(v.replace(',', '.')) || 0;
-    if (f.required && !v) { alert('Заполните: ' + f.label); return; }
+    if (f.required && !v) { toast('Заполните: ' + f.label); return; }
     rec[f.key] = v;
   }
 
@@ -419,16 +1078,18 @@ function saveRecord() {
   persist();
   render();
   closeModal();
+  toast(editIndex !== null ? 'Обновлено' : 'Добавлено');
 }
 
 function deleteCurrent() {
   if (editIndex === null) return;
-  if (!confirm('Удалить запись?')) return;
+  if (!confirm('Удалить эту запись?')) return;
   const data = editType === 'sales' ? salesData : hoursData;
   data.splice(editIndex, 1);
   persist();
   render();
   closeModal();
+  toast('Удалено');
 }
 
 // ========================
@@ -436,30 +1097,88 @@ function deleteCurrent() {
 // ========================
 function persist() {
   try {
-    localStorage.setItem('earningsSales', JSON.stringify(salesData));
-    localStorage.setItem('earningsHours', JSON.stringify(hoursData));
+    localStorage.setItem('earningsSales2', JSON.stringify(salesData));
+    localStorage.setItem('earningsHours2', JSON.stringify(hoursData));
   } catch(e) {}
 }
 function restore() {
   try {
-    salesData = JSON.parse(localStorage.getItem('earningsSales') || '[]');
-    hoursData = JSON.parse(localStorage.getItem('earningsHours') || '[]');
+    salesData = JSON.parse(localStorage.getItem('earningsSales2') || '[]');
+    hoursData = JSON.parse(localStorage.getItem('earningsHours2') || '[]');
   } catch(e) { salesData = []; hoursData = []; }
 }
 
 function clearAll() {
   if (!salesData.length && !hoursData.length) return;
-  if (!confirm('Удалить ВСЕ данные (и продажи, и часы)?')) return;
+  if (!confirm('Удалить ВСЕ данные? Это действие необратимо.')) return;
   salesData = []; hoursData = [];
   persist(); render();
+  toast('Все данные удалены');
 }
+
+// ========================
+//  МЕНЮ «ЕЩЁ»
+// ========================
+function menuMore() {
+  const choice = prompt(
+    'Выберите действие:\n\n' +
+    '1 — Скачать резервную копию (JSON)\n' +
+    '2 — Загрузить резервную копию (JSON)\n' +
+    '3 — Удалить все данные\n\n' +
+    'Введите номер:'
+  );
+  if (choice === '1') backupJSON();
+  else if (choice === '2') restoreJSON();
+  else if (choice === '3') clearAll();
+}
+
+function backupJSON() {
+  if (!salesData.length && !hoursData.length) {
+    toast('Нет данных');
+    return;
+  }
+  const blob = new Blob(
+    [JSON.stringify({ salesData, hoursData, exported: new Date().toISOString() }, null, 2)],
+    { type: 'application/json' }
+  );
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('Резервная копия скачана');
+}
+
+function restoreJSON() {
+  document.getElementById('fileInputJSON').click();
+}
+
+document.getElementById('fileInputJSON').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const obj = JSON.parse(evt.target.result);
+      if (!obj.salesData && !obj.hoursData) throw new Error('Неверный формат');
+      if (!confirm('Заменить текущие данные резервной копией?')) return;
+      salesData = obj.salesData || [];
+      hoursData = obj.hoursData || [];
+      persist(); render();
+      toast('Данные восстановлены');
+    } catch (err) {
+      alert('Ошибка: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
 
 // ========================
 //  EXCEL — ЗАГРУЗКА
 // ========================
-function loadExcel() { document.getElementById('fileInput').click(); }
+function loadExcel() { document.getElementById('fileInputExcel').click(); }
 
-document.getElementById('fileInput').addEventListener('change', function(e) {
+document.getElementById('fileInputExcel').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -470,24 +1189,19 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
       const newSales = [];
       const newHours = [];
 
-      // --- Определяем листы ---
-      // Ищем лист продаж (Подключения / Продажи) и лист часов (часы/внедрения/Логистика)
       let salesSheetName = null, hoursSheetName = null;
       wb.SheetNames.forEach(name => {
         const n = name.toLowerCase();
         if (n.includes('подключ') || n.includes('продаж')) salesSheetName = name;
         else if (n.includes('час') || n.includes('внедрен')) hoursSheetName = name;
       });
-
-      // Fallback: если не нашли — берём 1-й и 2-й листы
       if (!salesSheetName && wb.SheetNames[0]) salesSheetName = wb.SheetNames[0];
       if (!hoursSheetName && wb.SheetNames[1]) hoursSheetName = wb.SheetNames[1];
 
-      // --- Читаем лист продаж ---
+      // --- Продажи ---
       if (salesSheetName) {
         const ws = wb.Sheets[salesSheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        // Ищем строку заголовков (обычно первая непустая)
         let headerRow = 0;
         for (let i = 0; i < rows.length; i++) {
           if (rows[i].some(v => String(v).trim())) { headerRow = i; break; }
@@ -505,26 +1219,24 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
           if (org.toLowerCase().includes('итого')) continue;
           if (!org && !sumStr) continue;
 
-          // Разделяем org и ИНН/КПП, если они в одной ячейке
           let inn = '', kpp = '', orgClean = org;
-          // пример: 'ООО "ТД Премьер Айс" 5001051656-500101001'
           const m = org.match(/(.+?)\s+([\d]{10,12})-([\d]{9,11})\s*$/);
-          if (m) {
-            orgClean = m[1].trim();
-            inn = m[2];
-            kpp = m[3];
-          } else {
+          if (m) { orgClean = m[1].trim(); inn = m[2]; kpp = m[3]; }
+          else {
             const m2 = org.match(/(.+?)\s+([\d]{10,12})\s*$/);
             if (m2) { orgClean = m2[1].trim(); inn = m2[2]; }
           }
 
           const sum = parseFloat(String(sumStr).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
           if (!orgClean) continue;
-          newSales.push({ org: orgClean, inn, kpp, sum, product: colProduct >= 0 ? String(r[colProduct] || '').trim() : '' });
+          newSales.push({
+            org: orgClean, inn, kpp, sum,
+            product: colProduct >= 0 ? String(r[colProduct] || '').trim() : ''
+          });
         }
       }
 
-      // --- Читаем лист часов ---
+      // --- Часы ---
       if (hoursSheetName) {
         const ws = wb.Sheets[hoursSheetName];
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -545,12 +1257,9 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
           const r = rows[i];
           if (!r || r.every(v => !String(v).trim())) continue;
           const org = colOrg >= 0 ? String(r[colOrg] || '').trim() : '';
-          if (!org) continue;
-          if (org.toLowerCase().includes('итого')) continue;
-
+          if (!org || org.toLowerCase().includes('итого')) continue;
           const hoursVal = colHours >= 0 ? parseFloat(String(r[colHours] || '').replace(',', '.')) : 0;
           if (!hoursVal) continue;
-
           newHours.push({
             org,
             inn:    colInn    >= 0 ? String(r[colInn]    || '').trim() : '',
@@ -564,20 +1273,19 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
       }
 
       if (!newSales.length && !newHours.length) {
-        alert('Не удалось распознать данные.\nПроверьте, что в файле есть лист с продажами и лист с часами.');
+        alert('Не удалось распознать данные.');
         return;
       }
 
-      const msg = `Найдено:\n• Продажи: ${newSales.length} записей\n• Часы: ${newHours.length} записей\n\nЗаменить текущие данные?`;
+      const msg = `Найдено:\n• Продажи: ${newSales.length}\n• Часы: ${newHours.length}\n\nЗаменить текущие данные?`;
       if (!confirm(msg)) return;
 
       salesData = newSales;
       hoursData = newHours;
-      persist();
-      render();
-      alert('Загрузка завершена.');
+      persist(); render();
+      toast('Загружено успешно');
     } catch (err) {
-      alert('Ошибка при чтении файла: ' + err.message);
+      alert('Ошибка чтения файла: ' + err.message);
     }
     e.target.value = '';
   };
@@ -589,43 +1297,49 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 // ========================
 function saveExcel() {
   if (!salesData.length && !hoursData.length) {
-    alert('Нет данных для сохранения');
+    toast('Нет данных для сохранения');
     return;
   }
-
+  const t = getTotals();
   const wb = XLSX.utils.book_new();
 
   // Лист продаж
   const salesRows = salesData.map(r => {
-    const { gross, net } = calcSale(r.sum);
+    const sum = +r.sum || 0;
+    const contribution = sum * t.salesPct / 100;
+    const net = contribution * (1 - TAX);
     return {
-      'Название организации ИНН/КПП': (r.inn ? r.org + ' ' + r.inn + (r.kpp ? '-' + r.kpp : '') : r.org),
-      'Сумма оплаты': r.sum,
+      'Название организации': r.org,
+      'ИНН': r.inn || '',
+      'КПП': r.kpp || '',
+      'Сумма оплаты': sum,
       'Продукт': r.product || '',
-      'Заработок до 13%': Math.round(gross * 100) / 100,
-      'Заработок после 13%': Math.round(net * 100) / 100
+      'Вклад в оборот, %': t.salesTurnover > 0 ? Math.round(sum / t.salesTurnover * 10000) / 100 : 0,
+      'Вклад в заработок до 13%': Math.round(contribution * 100) / 100,
+      'Вклад в заработок после 13%': Math.round(net * 100) / 100
     };
   });
-  const sT = totals();
   salesRows.push({});
   salesRows.push({
-    'Название организации ИНН/КПП': 'ИТОГО',
-    'Сумма оплаты': salesData.reduce((a, r) => a + (+r.sum || 0), 0),
-    'Заработок до 13%': Math.round(sT.salesGross * 100) / 100,
-    'Заработок после 13%': Math.round(sT.salesNet * 100) / 100
+    'Название организации': 'ИТОГО',
+    'Сумма оплаты': t.salesTurnover,
+    'Вклад в заработок до 13%': Math.round(t.salesGross * 100) / 100,
+    'Вклад в заработок после 13%': Math.round(t.salesNet * 100) / 100
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesRows), 'Подключения');
 
   // Лист часов
   const hoursRows = hoursData.map(r => {
-    const { gross, net } = calcHours(r.hours);
+    const h = +r.hours || 0;
+    const gross = h * HOURLY_RATE;
+    const net = gross * (1 - TAX);
     return {
       'Название организации': r.org,
       'ИНН': r.inn || '',
       'КПП': r.kpp || '',
       'Этап': r.stage || '',
       'Стадия внедрения': r.status || '',
-      'Кол-во часов по ютреку': r.hours,
+      'Кол-во часов по ютреку': h,
       'Ссылка ютрек': r.link || '',
       'Заработок до 13%': Math.round(gross * 100) / 100,
       'Заработок после 13%': Math.round(net * 100) / 100
@@ -634,24 +1348,28 @@ function saveExcel() {
   hoursRows.push({});
   hoursRows.push({
     'Название организации': 'ИТОГО',
-    'Кол-во часов по ютреку': hoursData.reduce((a, r) => a + (+r.hours || 0), 0),
-    'Заработок до 13%': Math.round(sT.hoursGross * 100) / 100,
-    'Заработок после 13%': Math.round(sT.hoursNet * 100) / 100
+    'Кол-во часов по ютреку': t.totalHours,
+    'Заработок до 13%': Math.round(t.hoursGross * 100) / 100,
+    'Заработок после 13%': Math.round(t.hoursNet * 100) / 100
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hoursRows), 'Логистика часы внедрения');
 
-  // Сводный лист
+  // Лист Итого
   const summaryRows = [
-    { 'Показатель': 'Продажи — до 13%',          'Сумма': Math.round(sT.salesGross * 100) / 100 },
-    { 'Показатель': 'Продажи — после 13%',       'Сумма': Math.round(sT.salesNet * 100) / 100 },
-    { 'Показатель': 'Часы — до 13%',             'Сумма': Math.round(sT.hoursGross * 100) / 100 },
-    { 'Показатель': 'Часы — после 13%',          'Сумма': Math.round(sT.hoursNet * 100) / 100 },
-    { 'Показатель': 'ОБЩИЙ ИТОГ — до 13%',       'Сумма': Math.round(sT.allGross * 100) / 100 },
-    { 'Показатель': 'ОБЩИЙ ИТОГ — на руки',      'Сумма': Math.round(sT.allNet * 100) / 100 }
+    { 'Показатель': 'Оборот продаж', 'Значение': t.salesTurnover },
+    { 'Показатель': 'Процент с продаж', 'Значение': t.salesPct + '%' },
+    { 'Показатель': 'Продажи — до 13%', 'Значение': Math.round(t.salesGross * 100) / 100 },
+    { 'Показатель': 'Продажи — на руки', 'Значение': Math.round(t.salesNet * 100) / 100 },
+    { 'Показатель': 'Всего часов', 'Значение': t.totalHours },
+    { 'Показатель': 'Часы — до 13%', 'Значение': Math.round(t.hoursGross * 100) / 100 },
+    { 'Показатель': 'Часы — на руки', 'Значение': Math.round(t.hoursNet * 100) / 100 },
+    { 'Показатель': 'ОБЩИЙ ИТОГ до 13%', 'Значение': Math.round(t.allGross * 100) / 100 },
+    { 'Показатель': 'ОБЩИЙ ИТОГ на руки', 'Значение': Math.round(t.allNet * 100) / 100 }
   ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Итого');
 
   XLSX.writeFile(wb, 'заработок_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('Excel сохранён');
 }
 
 // ========================
