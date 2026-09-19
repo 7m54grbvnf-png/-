@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#4a6cf7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Учёт заработка</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#f2f4f8; color:#1a1d29; padding-bottom:120px; }
+  header { background:#4a6cf7; color:#fff; padding:16px; position:sticky; top:0; z-index:10;
+    box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  header h1 { margin:0; font-size:18px; font-weight:600; }
+  .toolbar { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .toolbar button { flex:1; min-width:90px; padding:10px; border:none; border-radius:8px;
+    background:rgba(255,255,255,.2); color:#fff; font-size:13px; font-weight:500; }
+  .toolbar button:active { background:rgba(255,255,255,.35); }
+
+  .card { background:#fff; margin:12px; border-radius:12px; padding:14px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size:14px; margin:0 0 10px; color:#6b7280; text-transform:uppercase;
+    letter-spacing:.5px; font-weight:600; }
+
+  .row-item { display:flex; justify-content:space-between; align-items:flex-start;
+    padding:12px 0; border-bottom:1px solid #eef0f4; }
+  .row-item:last-child { border-bottom:none; }
+  .row-item .info { flex:1; min-width:0; }
+  .row-item .client { font-weight:600; font-size:15px; }
+  .row-item .details { font-size:12px; color:#6b7280; margin-top:3px; line-height:1.4; }
+  .row-item .amounts { text-align:right; margin-left:8px; white-space:nowrap; }
+  .row-item .gross { font-weight:600; font-size:14px; }
+  .row-item .net { font-weight:700; color:#16a34a; font-size:15px; margin-top:2px; }
+
+  .summary { position:fixed; bottom:0; left:0; right:0; background:#fff;
+    padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); z-index:10;
+    display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .summary .block { text-align:center; }
+  .summary .label { font-size:11px; color:#6b7280; text-transform:uppercase; letter-spacing:.3px; }
+  .summary .value { font-size:16px; font-weight:700; margin-top:2px; }
+  .summary .value.gross { color:#1a1d29; }
+  .summary .value.net { color:#16a34a; }
+  .summary .block.full { grid-column: span 2; border-top:1px solid #eef0f4; padding-top:8px; }
+  .summary .block.full .value { font-size:20px; }
+
+  .fab { position:fixed; right:20px; bottom:120px; width:56px; height:56px;
+    border-radius:28px; background:#4a6cf7; color:#fff; border:none; font-size:28px;
+    box-shadow:0 4px 14px rgba(74,108,247,.5); z-index:11; }
+
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
+    align-items:center; justify-content:center; z-index:100; padding:16px; }
+  .overlay.show { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:400px;
+    max-height:90vh; overflow-y:auto; }
+  .modal h2 { margin:0 0 6px; font-size:17px; }
+  .modal .hint { font-size:12px; color:#9ca3af; margin-bottom:14px; }
+  .modal label { display:block; font-size:13px; color:#6b7280; margin-bottom:4px; margin-top:12px; }
+  .modal input, .modal select { width:100%; padding:12px; border:1px solid #d1d5db;
+    border-radius:8px; font-size:16px; background:#fff; }
+  .modal input:focus, .modal select:focus { outline:none; border-color:#4a6cf7; }
+  .modal-buttons { display:flex; gap:8px; margin-top:20px; }
+  .modal-buttons button { flex:1; padding:12px; border-radius:8px; border:none;
+    font-size:15px; font-weight:600; }
+  .btn-primary { background:#4a6cf7; color:#fff; }
+  .btn-danger { background:#ef4444; color:#fff; }
+  .btn-secondary { background:#e5e7eb; color:#1a1d29; }
+
+  .empty { text-align:center; color:#9ca3af; padding:40px 20px; font-size:14px; }
+  .type-badge { display:inline-block; padding:2px 8px; border-radius:6px;
+    font-size:10px; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+  .type-hours { background:#dbeafe; color:#1e40af; }
+  .type-sales { background:#fef3c7; color:#92400e; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>💰 Учёт заработка</h1>
+  <div class="toolbar">
+    <button onclick="loadExcel()">📂 Открыть</button>
+    <button onclick="saveExcel()">💾 Сохранить</button>
+    <button onclick="clearAll()">🗑 Очистить</button>
+  </div>
+</header>
+
+<div id="list"></div>
+<div class="empty" id="empty">Нет записей. Нажмите + чтобы добавить.</div>
+
+<button class="fab" onclick="openEdit()">+</button>
+
+<div class="summary">
+  <div class="block">
+    <div class="label">До вычета 13%</div>
+    <div class="value gross" id="totalGross">0 ₽</div>
+  </div>
+  <div class="block">
+    <div class="label">После вычета 13%</div>
+    <div class="value net" id="totalNet">0 ₽</div>
+  </div>
+  <div class="block full">
+    <div class="label">Всего к получению (на руки)</div>
+    <div class="value net" id="grandTotal">0 ₽</div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Новая запись</h2>
+    <div class="hint" id="modalHint"></div>
+
+    <label>Тип</label>
+    <select id="inpType">
+      <option value="hours">⏱ Часы (825 ₽/час)</option>
+      <option value="sales">💵 Продажи</option>
+    </select>
+
+    <label>Клиент / описание</label>
+    <input id="inpClient" type="text" placeholder="Имя клиента" autocomplete="off">
+
+    <div id="hoursBlock">
+      <label>Часы</label>
+      <input id="inpHours" type="number" inputmode="decimal" step="0.01" placeholder="0" value="0">
+    </div>
+
+    <div id="salesBlock" style="display:none">
+      <label>Сумма продаж, ₽</label>
+      <input id="inpSales" type="number" inputmode="decimal" step="1" placeholder="0" value="0">
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn-secondary" onclick="closeModal()">Отмена</button>
+      <button class="btn-danger" id="btnDelete" onclick="deleteCurrent()" style="display:none">Удалить</button>
+      <button class="btn-primary" onclick="saveRecord()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+
+<script>
+// ========================
+//  КОНСТАНТЫ
+// ========================
+const HOURLY_RATE = 825;      // ₽ за час
+const TAX = 0.13;             // 13%
+
+// ========================
+//  ДАННЫЕ
+// ========================
+let data = JSON.parse(localStorage.getItem('earningsData') || '[]');
+let editIndex = null;
+
+// ========================
+//  ФОРМУЛЫ
+// ========================
+
+// Прогрессивная шкала для продаж:
+// до 300 000 → 0%
+// от 300 000 до 700 000 → 5%
+// от 700 000 и выше → 10%
+function salesPercent(amount) {
+  if (amount < 300000) return 0;
+  if (amount < 700000) return 0.05;
+  return 0.10;
+}
+
+// Расчёт одной записи. Возвращает {gross, net, info}
+function calcRecord(rec) {
+  let gross = 0;
+  let info = '';
+
+  if (rec.type === 'hours') {
+    const h = +rec.hours || 0;
+    gross = h * HOURLY_RATE;
+    info = `${h} ч × ${HOURLY_RATE} ₽`;
+  } else {
+    const s = +rec.sales || 0;
+    const p = salesPercent(s);
+    gross = s * p;
+    info = `Продажи ${fmt(s)} ₽ → ${(p*100).toFixed(0)}%`;
+  }
+
+  const net = gross * (1 - TAX);
+  return { gross, net, info };
+}
+
+// ========================
+//  УТИЛИТЫ
+// ========================
+function fmt(n) {
+  return (Math.round(n * 100) / 100).toLocaleString('ru-RU', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  });
+}
+function fmtInt(n) {
+  return Math.round(n).toLocaleString('ru-RU');
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ========================
+//  ОТРИСОВКА
+// ========================
+function persist() { localStorage.setItem('earningsData', JSON.stringify(data)); }
+
+function render() {
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+  list.innerHTML = '';
+
+  if (data.length === 0) {
+    empty.style.display = 'block';
+    document.getElementById('totalGross').textContent = '0 ₽';
+    document.getElementById('totalNet').textContent = '0 ₽';
+    document.getElementById('grandTotal').textContent = '0 ₽';
+    return;
+  }
+  empty.style.display = 'none';
+
+  let sumGross = 0, sumNet = 0;
+
+  data.forEach((r, i) => {
+    const { gross, net, info } = calcRecord(r);
+    sumGross += gross;
+    sumNet += net;
+
+    const isHours = r.type === 'hours';
+    const div = document.createElement('div');
+    div.className = 'row-item';
+    div.innerHTML = `
+      <div class="info">
+        <span class="type-badge ${isHours ? 'type-hours' : 'type-sales'}">
+          ${isHours ? 'Часы' : 'Продажи'}
+        </span>
+        <div class="client">${escapeHtml(r.client || '—')}</div>
+        <div class="details">${info}</div>
+      </div>
+      <div class="amounts">
+        <div class="gross">${fmt(gross)} ₽</div>
+        <div class="net">${fmt(net)} ₽</div>
+      </div>
+    `;
+    div.onclick = () => openEdit(i);
+    list.appendChild(div);
+  });
+
+  document.getElementById('totalGross').textContent = fmt(sumGross) + ' ₽';
+  document.getElementById('totalNet').textContent = fmt(sumNet) + ' ₽';
+  document.getElementById('grandTotal').textContent = fmt(sumNet) + ' ₽';
+}
+
+// ========================
+//  МОДАЛЬНОЕ ОКНО
+// ========================
+function openEdit(idx = null) {
+  editIndex = idx;
+  const r = idx !== null ? data[idx] : { type:'hours', client:'', hours:0, sales:0 };
+  document.getElementById('modalTitle').textContent = idx !== null ? 'Редактирование' : 'Новая запись';
+  document.getElementById('inpType').value = r.type || 'hours';
+  document.getElementById('inpClient').value = r.client || '';
+  document.getElementById('inpHours').value = r.hours || 0;
+  document.getElementById('inpSales').value = r.sales || 0;
+  document.getElementById('btnDelete').style.display = idx !== null ? 'block' : 'none';
+  toggleTypeFields();
+  updateHint();
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+
+function toggleTypeFields() {
+  const t = document.getElementById('inpType').value;
+  document.getElementById('hoursBlock').style.display = t === 'hours' ? 'block' : 'none';
+  document.getElementById('salesBlock').style.display = t === 'sales' ? 'block' : 'none';
+  updateHint();
+}
+
+function updateHint() {
+  const t = document.getElementById('inpType').value;
+  const hint = document.getElementById('modalHint');
+  if (t === 'hours') {
+    hint.textContent = `Ставка: ${HOURLY_RATE} ₽/час. Из суммы вычитается 13%.`;
+  } else {
+    hint.textContent = 'До 300 000 ₽ — 0%. От 300 000 до 700 000 ₽ — 5%. От 700 000 ₽ — 10%. Из суммы вычитается 13%.';
+  }
+}
+
+function saveRecord() {
+  const type = document.getElementById('inpType').value;
+  const client = document.getElementById('inpClient').value.trim() || '—';
+
+  const rec = { type, client };
+  if (type === 'hours') {
+    const h = parseFloat(document.getElementById('inpHours').value.replace(',', '.')) || 0;
+    if (h < 0) { alert('Часы не могут быть отрицательными'); return; }
+    rec.hours = h;
+    rec.sales = 0;
+  } else {
+    const s = parseFloat(document.getElementById('inpSales').value.replace(',', '.')) || 0;
+    if (s < 0) { alert('Сумма не может быть отрицательной'); return; }
+    rec.sales = s;
+    rec.hours = 0;
+  }
+
+  if (editIndex !== null) data[editIndex] = rec;
+  else data.push(rec);
+
+  persist(); render(); closeModal();
+}
+
+function deleteCurrent() {
+  if (editIndex === null) return;
+  if (!confirm('Удалить запись?')) return;
+  data.splice(editIndex, 1);
+  persist(); render(); closeModal();
+}
+
+function clearAll() {
+  if (!data.length) return;
+  if (!confirm('Удалить все записи?')) return;
+  data = []; persist(); render();
+}
+
+// ========================
+//  EXCEL
+// ========================
+function loadExcel() { document.getElementById('fileInput').click(); }
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: 0 });
+
+      const newData = [];
+      rows.forEach(row => {
+        let client = '', hours = 0, sales = 0, type = null;
+        for (const key in row) {
+          const k = key.toLowerCase().trim();
+          const v = row[key];
+          if (k.includes('тип') || k === 'type')
+            type = String(v).toLowerCase().includes('прод') || String(v).toLowerCase()==='sales' ? 'sales' : 'hours';
+          else if (k.includes('клиент') || k.includes('client') || k.includes('name'))
+            client = String(v).trim();
+          else if (k.includes('час') || k.includes('hour'))
+            hours = parseFloat(v) || 0;
+          else if (k.includes('продаж') || k.includes('sales') || k.includes('сумма'))
+            sales = parseFloat(v) || 0;
+        }
+        // Автоопределение типа, если не указан
+        if (!type) type = sales > 0 ? 'sales' : 'hours';
+        if (client || hours || sales) {
+          newData.push({ type, client: client || '—', hours, sales });
+        }
+      });
+
+      if (!newData.length) {
+        alert('Не удалось распознать данные.\nОжидаются колонки: Клиент, Часы и/или Продажи');
+        return;
+      }
+      if (!confirm(`Найдено ${newData.length} записей. Заменить текущие данные?`)) return;
+      data = newData; persist(); render();
+      alert('Загружено ' + data.length + ' записей.');
+    } catch (err) {
+      alert('Ошибка при чтении файла: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function saveExcel() {
+  if (!data.length) { alert('Нет данных для сохранения'); return; }
+  const exportRows = data.map(r => {
+    const { gross, net } = calcRecord(r);
+    return {
+      'Тип': r.type === 'hours' ? 'Часы' : 'Продажи',
+      'Клиент': r.client,
+      'Часы': r.hours || 0,
+      'Продажи': r.sales || 0,
+      'До вычета 13%': Math.round(gross * 100) / 100,
+      'После вычета 13%': Math.round(net * 100) / 100
+    };
+  });
+
+  const sumGross = data.reduce((a, r) => a + calcRecord(r).gross, 0);
+  const sumNet = data.reduce((a, r) => a + calcRecord(r).net, 0);
+  exportRows.push({});
+  exportRows.push({ 'Тип': 'ИТОГО', 'До вычета 13%': Math.round(sumGross*100)/100, 'После вычета 13%': Math.round(sumNet*100)/100 });
+
+  const ws = XLSX.utils.json_to_sheet(exportRows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Заработок');
+  XLSX.writeFile(wb, 'заработок_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ========================
+//  СОБЫТИЯ
+// ========================
+document.getElementById('inpType').addEventListener('change', toggleTypeFields);
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target.id === 'overlay') closeModal();
+});
+
+render();
+</script>
+</body>
