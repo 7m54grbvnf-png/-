@@ -10,32 +10,37 @@
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    background:#f2f4f8; color:#1a1d29; padding-bottom:130px; }
-  header { background:#4a6cf7; color:#fff; padding:16px; position:sticky; top:0; z-index:10;
+    background:#f2f4f8; color:#1a1d29; padding-bottom:150px; font-size:14px; }
+  header { background:#4a6cf7; color:#fff; padding:14px 16px; position:sticky; top:0; z-index:10;
     box-shadow:0 2px 8px rgba(0,0,0,.1); }
-  header h1 { margin:0; font-size:18px; font-weight:600; }
-  .toolbar { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  .toolbar button { flex:1; min-width:90px; padding:10px; border:none; border-radius:8px;
-    background:rgba(255,255,255,.2); color:#fff; font-size:13px; font-weight:500; }
+  header h1 { margin:0; font-size:17px; font-weight:600; }
+  .toolbar { display:flex; gap:6px; margin-top:10px; }
+  .toolbar button { flex:1; padding:9px 6px; border:none; border-radius:8px;
+    background:rgba(255,255,255,.2); color:#fff; font-size:12px; font-weight:500; }
   .toolbar button:active { background:rgba(255,255,255,.35); }
 
-  .filters { display:flex; gap:6px; padding:10px 12px 4px; }
-  .filters button { flex:1; padding:9px 6px; border:1px solid #d1d5db; border-radius:8px;
-    background:#fff; font-size:13px; font-weight:600; color:#6b7280; }
-  .filters button.active { background:#4a6cf7; color:#fff; border-color:#4a6cf7; }
+  .tabs { display:flex; background:#fff; border-bottom:1px solid #e5e7eb;
+    position:sticky; top:0; z-index:9; }
+  .tabs button { flex:1; padding:12px 4px; border:none; background:none;
+    font-size:12px; font-weight:600; color:#6b7280; border-bottom:2px solid transparent; }
+  .tabs button.active { color:#4a6cf7; border-bottom-color:#4a6cf7; }
 
-  .card { background:#fff; margin:12px; border-radius:12px; padding:14px;
+  .sheet-meta { padding:10px 14px 4px; font-size:11px; color:#6b7280; }
+  .sheet-meta b { color:#1a1d29; }
+
+  .row-item { background:#fff; border-radius:10px; margin:8px 12px; padding:12px 14px;
     box-shadow:0 1px 3px rgba(0,0,0,.06); }
-
-  .row-item { display:flex; justify-content:space-between; align-items:flex-start;
-    padding:12px 0; border-bottom:1px solid #eef0f4; }
-  .row-item:last-child { border-bottom:none; }
-  .row-item .info { flex:1; min-width:0; }
-  .row-item .client { font-weight:600; font-size:15px; }
-  .row-item .details { font-size:12px; color:#6b7280; margin-top:3px; line-height:1.4; }
-  .row-item .amounts { text-align:right; margin-left:8px; white-space:nowrap; }
-  .row-item .gross { font-weight:600; font-size:14px; }
-  .row-item .net { font-weight:700; color:#16a34a; font-size:15px; margin-top:2px; }
+  .row-item .client { font-weight:600; font-size:14px; line-height:1.3; word-break:break-word; }
+  .row-item .meta { font-size:11px; color:#6b7280; margin-top:3px; }
+  .row-item .fields { margin-top:8px; display:grid;
+    grid-template-columns:auto 1fr; gap:3px 10px; font-size:12px; }
+  .row-item .fields .k { color:#9ca3af; }
+  .row-item .fields .v { color:#1a1d29; word-break:break-word; }
+  .row-item .amounts { margin-top:10px; padding-top:10px; border-top:1px dashed #e5e7eb;
+    display:flex; justify-content:space-between; align-items:baseline; }
+  .row-item .gross { font-size:12px; color:#6b7280; }
+  .row-item .net { font-size:16px; font-weight:700; color:#16a34a; }
+  .row-item .net-label { font-size:10px; color:#6b7280; text-align:right; }
 
   .summary { position:fixed; bottom:0; left:0; right:0; background:#fff;
     padding:10px 14px; box-shadow:0 -2px 10px rgba(0,0,0,.08); z-index:10; }
@@ -49,33 +54,41 @@
   .summary .block.full .value { font-size:20px; }
   .summary .filter-note { text-align:center; font-size:11px; color:#6b7280; margin-bottom:6px; }
 
-  .fab { position:fixed; right:20px; bottom:140px; width:56px; height:56px;
+  .fab { position:fixed; right:20px; bottom:160px; width:56px; height:56px;
     border-radius:28px; background:#4a6cf7; color:#fff; border:none; font-size:28px;
     box-shadow:0 4px 14px rgba(74,108,247,.5); z-index:11; }
 
   .overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
     align-items:center; justify-content:center; z-index:100; padding:16px; }
   .overlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:400px;
-    max-height:90vh; overflow-y:auto; }
-  .modal h2 { margin:0 0 6px; font-size:17px; }
-  .modal .hint { font-size:12px; color:#9ca3af; margin-bottom:14px; }
-  .modal label { display:block; font-size:13px; color:#6b7280; margin-bottom:4px; margin-top:12px; }
-  .modal input, .modal select { width:100%; padding:12px; border:1px solid #d1d5db;
-    border-radius:8px; font-size:16px; background:#fff; }
+  .modal { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:420px;
+    max-height:92vh; overflow-y:auto; }
+  .modal h2 { margin:0 0 14px; font-size:17px; }
+  .modal label { display:block; font-size:12px; color:#6b7280; margin-bottom:4px; margin-top:10px; }
+  .modal input, .modal select, .modal textarea { width:100%; padding:10px; border:1px solid #d1d5db;
+    border-radius:8px; font-size:15px; background:#fff; font-family:inherit; }
   .modal input:focus, .modal select:focus { outline:none; border-color:#4a6cf7; }
-  .modal-buttons { display:flex; gap:8px; margin-top:20px; }
+  .modal-buttons { display:flex; gap:8px; margin-top:18px; }
   .modal-buttons button { flex:1; padding:12px; border-radius:8px; border:none;
     font-size:15px; font-weight:600; }
   .btn-primary { background:#4a6cf7; color:#fff; }
   .btn-danger { background:#ef4444; color:#fff; }
   .btn-secondary { background:#e5e7eb; color:#1a1d29; }
 
-  .empty { text-align:center; color:#9ca3af; padding:40px 20px; font-size:14px; }
-  .type-badge { display:inline-block; padding:2px 8px; border-radius:6px;
-    font-size:10px; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
-  .type-hours { background:#dbeafe; color:#1e40af; }
-  .type-sales { background:#fef3c7; color:#92400e; }
+  .empty { text-align:center; color:#9ca3af; padding:50px 20px; font-size:14px; }
+
+  /* Сводная таблица на вкладке Итого */
+  .report { margin:12px; background:#fff; border-radius:12px; padding:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .report h3 { font-size:13px; color:#6b7280; text-transform:uppercase; margin:0 0 12px;
+    letter-spacing:.5px; font-weight:600; }
+  .report table { width:100%; border-collapse:collapse; font-size:13px; }
+  .report td { padding:8px 0; border-bottom:1px solid #eef0f4; }
+  .report td:last-child { text-align:right; font-weight:600; }
+  .report tr:last-child td { border-bottom:none; }
+  .report .grand { padding-top:12px; margin-top:8px; border-top:2px solid #4a6cf7; }
+  .report .grand td { font-size:16px; font-weight:700; color:#16a34a; padding-top:12px; }
+  .report .gross-val { color:#6b7280; font-weight:600; }
 </style>
 </head>
 <body>
@@ -83,24 +96,23 @@
 <header>
   <h1>💰 Учёт заработка</h1>
   <div class="toolbar">
-    <button onclick="loadExcel()">📂 Открыть</button>
-    <button onclick="saveExcel()">💾 Сохранить</button>
+    <button onclick="loadExcel()">📂 Открыть Excel</button>
+    <button onclick="saveExcel()">💾 Сохранить Excel</button>
     <button onclick="clearAll()">🗑 Очистить</button>
   </div>
 </header>
 
-<div class="filters">
-  <button id="fAll"    onclick="setFilter('all')">Все</button>
-  <button id="fHours"  onclick="setFilter('hours')">⏱ Часы</button>
-  <button id="fSales"  onclick="setFilter('sales')">💵 Продажи</button>
+<div class="tabs">
+  <button id="tabSales" onclick="setTab('sales')">💵 Продажи</button>
+  <button id="tabHours" onclick="setTab('hours')">⏱ Часы</button>
+  <button id="tabSummary" onclick="setTab('summary')">📊 Итого</button>
 </div>
 
-<div id="list"></div>
-<div class="empty" id="empty">Нет записей в этом разделе. Нажмите + чтобы добавить.</div>
+<div id="content"></div>
 
-<button class="fab" onclick="openEdit()">+</button>
+<button class="fab" id="fab" onclick="openEdit()">+</button>
 
-<div class="summary">
+<div class="summary" id="summaryBar">
   <div class="filter-note" id="filterNote"></div>
   <div class="grid">
     <div class="block">
@@ -121,27 +133,7 @@
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modalTitle">Новая запись</h2>
-    <div class="hint" id="modalHint"></div>
-
-    <label>Тип</label>
-    <select id="inpType">
-      <option value="hours">⏱ Часы (825 ₽/час)</option>
-      <option value="sales">💵 Продажи</option>
-    </select>
-
-    <label>Клиент / описание</label>
-    <input id="inpClient" type="text" placeholder="Имя клиента" autocomplete="off">
-
-    <div id="hoursBlock">
-      <label>Часы</label>
-      <input id="inpHours" type="number" inputmode="decimal" step="0.01" placeholder="0" value="0">
-    </div>
-
-    <div id="salesBlock" style="display:none">
-      <label>Сумма продаж, ₽</label>
-      <input id="inpSales" type="number" inputmode="decimal" step="1" placeholder="0" value="0">
-    </div>
-
+    <div id="modalFields"></div>
     <div class="modal-buttons">
       <button class="btn-secondary" onclick="closeModal()">Отмена</button>
       <button class="btn-danger" id="btnDelete" onclick="deleteCurrent()" style="display:none">Удалить</button>
@@ -154,42 +146,29 @@
 
 <script>
 // ========================
-//  КОНСТАНТЫ
+//  КОНСТАНТЫ И ФОРМУЛЫ
 // ========================
 const HOURLY_RATE = 825;
 const TAX = 0.13;
 
-// ========================
-//  ДАННЫЕ
-// ========================
-let data = JSON.parse(localStorage.getItem('earningsData') || '[]');
-let editIndex = null;
-let currentFilter = localStorage.getItem('earningsFilter') || 'all';
-
-// ========================
-//  ФОРМУЛЫ
-// ========================
+// Прогрессивная шкала для продаж:
+// до 300 000 — 0%, от 300 000 до 700 000 — 5%, от 700 000 — 10%
 function salesPercent(amount) {
   if (amount < 300000) return 0;
   if (amount < 700000) return 0.05;
   return 0.10;
 }
 
-function calcRecord(rec) {
-  let gross = 0, info = '';
-  if (rec.type === 'hours') {
-    const h = +rec.hours || 0;
-    gross = h * HOURLY_RATE;
-    info = `${h} ч × ${HOURLY_RATE} ₽`;
-  } else {
-    const s = +rec.sales || 0;
-    const p = salesPercent(s);
-    gross = s * p;
-    info = `Продажи ${fmt(s)} ₽ → ${(p*100).toFixed(0)}%`;
-  }
-  const net = gross * (1 - TAX);
-  return { gross, net, info };
-}
+// ========================
+//  ДАННЫЕ
+// ========================
+// Продажи: [{org, inn, kpp, sum, product}, ...]
+// Часы:    [{org, inn, kpp, stage, status, hours, link}, ...]
+let salesData = [];
+let hoursData = [];
+let currentTab = 'sales';
+let editIndex = null;
+let editType = 'sales';
 
 // ========================
 //  УТИЛИТЫ
@@ -199,211 +178,404 @@ function fmt(n) {
     minimumFractionDigits: 2, maximumFractionDigits: 2
   });
 }
+function fmtInt(n) {
+  return Math.round(n).toLocaleString('ru-RU');
+}
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
+// Расчёт заработка с продажи
+function calcSale(sum) {
+  const s = +sum || 0;
+  const p = salesPercent(s);
+  const gross = s * p;
+  const net = gross * (1 - TAX);
+  return { gross, net, percent: p };
+}
+// Расчёт заработка с часов
+function calcHours(h) {
+  const hours = +h || 0;
+  const gross = hours * HOURLY_RATE;
+  const net = gross * (1 - TAX);
+  return { gross, net };
 }
 
 // ========================
-//  ФИЛЬТР
+//  ИТОГИ
 // ========================
-function setFilter(f) {
-  currentFilter = f;
-  localStorage.setItem('earningsFilter', f);
+function totals() {
+  let salesGross = 0, salesNet = 0, hoursGross = 0, hoursNet = 0, totalHours = 0;
+  salesData.forEach(r => { const c = calcSale(r.sum); salesGross += c.gross; salesNet += c.net; });
+  hoursData.forEach(r => { const c = calcHours(r.hours); hoursGross += c.gross; hoursNet += c.net; totalHours += +r.hours || 0; });
+  return { salesGross, salesNet, hoursGross, hoursNet, totalHours,
+           allGross: salesGross + hoursGross, allNet: salesNet + hoursNet };
+}
+
+// ========================
+//  ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК
+// ========================
+function setTab(t) {
+  currentTab = t;
+  document.getElementById('tabSales').classList.toggle('active', t === 'sales');
+  document.getElementById('tabHours').classList.toggle('active', t === 'hours');
+  document.getElementById('tabSummary').classList.toggle('active', t === 'summary');
+  document.getElementById('fab').style.display = t === 'summary' ? 'none' : 'block';
   render();
-}
-
-function updateFilterButtons() {
-  document.getElementById('fAll').classList.toggle('active', currentFilter === 'all');
-  document.getElementById('fHours').classList.toggle('active', currentFilter === 'hours');
-  document.getElementById('fSales').classList.toggle('active', currentFilter === 'sales');
 }
 
 // ========================
 //  ОТРИСОВКА
 // ========================
-function persist() { localStorage.setItem('earningsData', JSON.stringify(data)); }
-
 function render() {
-  updateFilterButtons();
+  renderSummaryBar();
+  if (currentTab === 'sales') renderSalesList();
+  else if (currentTab === 'hours') renderHoursList();
+  else renderSummaryTab();
+}
 
-  const list = document.getElementById('list');
-  const empty = document.getElementById('empty');
-  list.innerHTML = '';
-
-  // Фильтруем записи
-  const visible = data
-    .map((r, i) => ({ r, i }))
-    .filter(({ r }) => currentFilter === 'all' || r.type === currentFilter);
-
-  // Считаем итоги ТОЛЬКО по видимым записям
-  let sumGross = 0, sumNet = 0;
-  visible.forEach(({ r }) => {
-    const { gross, net } = calcRecord(r);
-    sumGross += gross;
-    sumNet += net;
-  });
-
-  // Заголовок над итогами — какой фильтр сейчас
+function renderSummaryBar() {
+  const t = totals();
   const note = document.getElementById('filterNote');
-  if (currentFilter === 'all') note.textContent = 'Показаны ВСЕ записи';
-  else if (currentFilter === 'hours') note.textContent = 'Показаны только ЧАСЫ';
-  else note.textContent = 'Показаны только ПРОДАЖИ';
 
-  if (visible.length === 0) {
-    empty.style.display = 'block';
-    document.getElementById('totalGross').textContent = '0 ₽';
-    document.getElementById('totalNet').textContent = '0 ₽';
-    document.getElementById('grandTotal').textContent = '0 ₽';
+  if (currentTab === 'sales') {
+    note.textContent = 'Раздел: ПРОДАЖИ';
+    document.getElementById('totalGross').textContent = fmt(t.salesGross) + ' ₽';
+    document.getElementById('totalNet').textContent = fmt(t.salesNet) + ' ₽';
+    document.getElementById('grandTotal').textContent = fmt(t.salesNet) + ' ₽';
+  } else if (currentTab === 'hours') {
+    note.textContent = 'Раздел: ЧАСЫ (' + t.totalHours.toFixed(2) + ' ч)';
+    document.getElementById('totalGross').textContent = fmt(t.hoursGross) + ' ₽';
+    document.getElementById('totalNet').textContent = fmt(t.hoursNet) + ' ₽';
+    document.getElementById('grandTotal').textContent = fmt(t.hoursNet) + ' ₽';
+  } else {
+    note.textContent = 'ОБЩИЙ ИТОГ по всем разделам';
+    document.getElementById('totalGross').textContent = fmt(t.allGross) + ' ₽';
+    document.getElementById('totalNet').textContent = fmt(t.allNet) + ' ₽';
+    document.getElementById('grandTotal').textContent = fmt(t.allNet) + ' ₽';
+  }
+}
+
+// ---------- Вкладка Продажи ----------
+function renderSalesList() {
+  const c = document.getElementById('content');
+  if (!salesData.length) {
+    c.innerHTML = '<div class="empty">Нет записей о продажах.<br>Нажмите + или 📂 Открыть Excel.</div>';
     return;
   }
-  empty.style.display = 'none';
-
-  visible.forEach(({ r, i }) => {
-    const { gross, net, info } = calcRecord(r);
-    const isHours = r.type === 'hours';
-
+  c.innerHTML = '';
+  salesData.forEach((r, i) => {
+    const { gross, net, percent } = calcSale(r.sum);
     const div = document.createElement('div');
     div.className = 'row-item';
     div.innerHTML = `
-      <div class="info">
-        <span class="type-badge ${isHours ? 'type-hours' : 'type-sales'}">
-          ${isHours ? 'Часы' : 'Продажи'}
-        </span>
-        <div class="client">${escapeHtml(r.client || '—')}</div>
-        <div class="details">${info}</div>
+      <div class="client">${escapeHtml(r.org || '—')}</div>
+      ${r.inn ? `<div class="meta">ИНН/КПП: ${escapeHtml(r.inn)}${r.kpp ? '-' + escapeHtml(r.kpp) : ''}</div>` : ''}
+      <div class="fields">
+        <span class="k">Сумма:</span><span class="v">${fmtInt(r.sum)} ₽</span>
+        <span class="k">Продукт:</span><span class="v">${escapeHtml(r.product || '—')}</span>
+        <span class="k">Ваш %:</span><span class="v">${(percent*100).toFixed(0)}%</span>
       </div>
       <div class="amounts">
-        <div class="gross">${fmt(gross)} ₽</div>
-        <div class="net">${fmt(net)} ₽</div>
+        <div class="gross">До вычета: ${fmt(gross)} ₽</div>
+        <div style="text-align:right">
+          <div class="net">${fmt(net)} ₽</div>
+          <div class="net-label">после 13%</div>
+        </div>
       </div>
     `;
-    div.onclick = () => openEdit(i);
-    list.appendChild(div);
+    div.onclick = () => openEdit(i, 'sales');
+    c.appendChild(div);
   });
+}
 
-  document.getElementById('totalGross').textContent = fmt(sumGross) + ' ₽';
-  document.getElementById('totalNet').textContent = fmt(sumNet) + ' ₽';
-  document.getElementById('grandTotal').textContent = fmt(sumNet) + ' ₽';
+// ---------- Вкладка Часы ----------
+function renderHoursList() {
+  const c = document.getElementById('content');
+  if (!hoursData.length) {
+    c.innerHTML = '<div class="empty">Нет записей о часах.<br>Нажмите + или 📂 Открыть Excel.</div>';
+    return;
+  }
+  c.innerHTML = '';
+  hoursData.forEach((r, i) => {
+    const { gross, net } = calcHours(r.hours);
+    const div = document.createElement('div');
+    div.className = 'row-item';
+    div.innerHTML = `
+      <div class="client">${escapeHtml(r.org || '—')}</div>
+      ${r.inn ? `<div class="meta">ИНН: ${escapeHtml(r.inn)}${r.kpp ? ', КПП: ' + escapeHtml(r.kpp) : ''}</div>` : ''}
+      <div class="fields">
+        ${r.stage ? `<span class="k">Этап:</span><span class="v">${escapeHtml(r.stage)}</span>` : ''}
+        ${r.status ? `<span class="k">Стадия:</span><span class="v">${escapeHtml(r.status)}</span>` : ''}
+        <span class="k">Часов:</span><span class="v">${r.hours}</span>
+        ${r.link ? `<span class="k">Ссылка:</span><span class="v" style="font-size:11px;color:#4a6cf7">${escapeHtml(r.link)}</span>` : ''}
+      </div>
+      <div class="amounts">
+        <div class="gross">До вычета: ${fmt(gross)} ₽</div>
+        <div style="text-align:right">
+          <div class="net">${fmt(net)} ₽</div>
+          <div class="net-label">после 13%</div>
+        </div>
+      </div>
+    `;
+    div.onclick = () => openEdit(i, 'hours');
+    c.appendChild(div);
+  });
+}
+
+// ---------- Вкладка Итого ----------
+function renderSummaryTab() {
+  const t = totals();
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="report">
+      <h3>💵 Продажи</h3>
+      <table>
+        <tr><td>Клиентов в списке</td><td>${salesData.length}</td></tr>
+        <tr><td>Заработок до 13%</td><td class="gross-val">${fmt(t.salesGross)} ₽</td></tr>
+        <tr><td>Заработок после 13%</td><td style="color:#16a34a">${fmt(t.salesNet)} ₽</td></tr>
+      </table>
+    </div>
+
+    <div class="report">
+      <h3>⏱ Часы</h3>
+      <table>
+        <tr><td>Записей</td><td>${hoursData.length}</td></tr>
+        <tr><td>Всего часов</td><td>${t.totalHours.toFixed(2)}</td></tr>
+        <tr><td>Ставка за час</td><td>${HOURLY_RATE} ₽</td></tr>
+        <tr><td>Заработок до 13%</td><td class="gross-val">${fmt(t.hoursGross)} ₽</td></tr>
+        <tr><td>Заработок после 13%</td><td style="color:#16a34a">${fmt(t.hoursNet)} ₽</td></tr>
+      </table>
+    </div>
+
+    <div class="report">
+      <h3>📊 Общий итог</h3>
+      <table>
+        <tr><td>Всего до 13%</td><td class="gross-val">${fmt(t.allGross)} ₽</td></tr>
+        <tr class="grand"><td>На руки (после 13%)</td><td>${fmt(t.allNet)} ₽</td></tr>
+      </table>
+    </div>
+  `;
 }
 
 // ========================
 //  МОДАЛЬНОЕ ОКНО
 // ========================
-function openEdit(idx = null) {
+const SALES_FIELDS = [
+  { key: 'org',     label: 'Организация (название + ИНН/КПП)', type: 'text', required: true },
+  { key: 'sum',     label: 'Сумма оплаты, ₽',                 type: 'number' },
+  { key: 'product', label: 'Продукт',                          type: 'text' }
+];
+const HOURS_FIELDS = [
+  { key: 'org',    label: 'Организация',          type: 'text', required: true },
+  { key: 'inn',    label: 'ИНН',                  type: 'text' },
+  { key: 'kpp',    label: 'КПП',                  type: 'text' },
+  { key: 'stage',  label: 'Этап',                 type: 'text' },
+  { key: 'status', label: 'Стадия внедрения',     type: 'text' },
+  { key: 'hours',  label: 'Кол-во часов',         type: 'number' },
+  { key: 'link',   label: 'Ссылка ютрек',         type: 'text' }
+];
+
+function openEdit(idx = null, type = null) {
   editIndex = idx;
+  editType = type || (currentTab === 'hours' ? 'hours' : 'sales');
+  const fields = editType === 'sales' ? SALES_FIELDS : HOURS_FIELDS;
+  const data = editType === 'sales' ? salesData : hoursData;
+  const rec = idx !== null ? data[idx] : {};
 
-  // Если добавляем новую запись — подставляем тип по текущему фильтру
-  let defaultType = 'hours';
-  if (idx === null) {
-    if (currentFilter === 'hours' || currentFilter === 'sales') defaultType = currentFilter;
-  }
+  document.getElementById('modalTitle').textContent =
+    (idx !== null ? 'Редактирование: ' : 'Новая запись: ') +
+    (editType === 'sales' ? 'Продажа' : 'Часы');
 
-  const r = idx !== null ? data[idx] : { type: defaultType, client:'', hours:0, sales:0 };
+  document.getElementById('modalFields').innerHTML = fields.map(f => `
+    <label>${f.label}${f.required ? ' *' : ''}</label>
+    <input id="f_${f.key}" type="${f.type}" ${f.type === 'number' ? 'step="0.01" inputmode="decimal"' : ''}
+           value="${escapeHtml(rec[f.key] != null ? rec[f.key] : (f.type === 'number' ? '0' : ''))}">
+  `).join('');
 
-  document.getElementById('modalTitle').textContent = idx !== null ? 'Редактирование' : 'Новая запись';
-  document.getElementById('inpType').value = r.type || 'hours';
-  document.getElementById('inpClient').value = r.client || '';
-  document.getElementById('inpHours').value = r.hours || 0;
-  document.getElementById('inpSales').value = r.sales || 0;
   document.getElementById('btnDelete').style.display = idx !== null ? 'block' : 'none';
-  toggleTypeFields();
   document.getElementById('overlay').classList.add('show');
 }
 
 function closeModal() { document.getElementById('overlay').classList.remove('show'); }
 
-function toggleTypeFields() {
-  const t = document.getElementById('inpType').value;
-  document.getElementById('hoursBlock').style.display = t === 'hours' ? 'block' : 'none';
-  document.getElementById('salesBlock').style.display = t === 'sales' ? 'block' : 'none';
-  updateHint();
-}
-
-function updateHint() {
-  const t = document.getElementById('inpType').value;
-  const hint = document.getElementById('modalHint');
-  if (t === 'hours') {
-    hint.textContent = `Ставка: ${HOURLY_RATE} ₽/час. Из суммы вычитается 13%.`;
-  } else {
-    hint.textContent = 'До 300 000 ₽ — 0%. От 300 000 до 700 000 ₽ — 5%. От 700 000 ₽ — 10%. Из суммы вычитается 13%.';
-  }
-}
-
 function saveRecord() {
-  const type = document.getElementById('inpType').value;
-  const client = document.getElementById('inpClient').value.trim() || '—';
+  const fields = editType === 'sales' ? SALES_FIELDS : HOURS_FIELDS;
+  const data = editType === 'sales' ? salesData : hoursData;
+  const rec = {};
 
-  const rec = { type, client };
-  if (type === 'hours') {
-    const h = parseFloat(document.getElementById('inpHours').value.replace(',', '.')) || 0;
-    if (h < 0) { alert('Часы не могут быть отрицательными'); return; }
-    rec.hours = h; rec.sales = 0;
-  } else {
-    const s = parseFloat(document.getElementById('inpSales').value.replace(',', '.')) || 0;
-    if (s < 0) { alert('Сумма не может быть отрицательной'); return; }
-    rec.sales = s; rec.hours = 0;
+  for (const f of fields) {
+    let v = document.getElementById('f_' + f.key).value.trim();
+    if (f.type === 'number') v = parseFloat(v.replace(',', '.')) || 0;
+    if (f.required && !v) { alert('Заполните: ' + f.label); return; }
+    rec[f.key] = v;
   }
 
   if (editIndex !== null) data[editIndex] = rec;
   else data.push(rec);
 
-  persist(); render(); closeModal();
+  persist();
+  render();
+  closeModal();
 }
 
 function deleteCurrent() {
   if (editIndex === null) return;
   if (!confirm('Удалить запись?')) return;
+  const data = editType === 'sales' ? salesData : hoursData;
   data.splice(editIndex, 1);
-  persist(); render(); closeModal();
-}
-
-function clearAll() {
-  if (!data.length) return;
-  if (!confirm('Удалить все записи?')) return;
-  data = []; persist(); render();
+  persist();
+  render();
+  closeModal();
 }
 
 // ========================
-//  EXCEL
+//  ЛОКАЛЬНОЕ ХРАНЕНИЕ
+// ========================
+function persist() {
+  try {
+    localStorage.setItem('earningsSales', JSON.stringify(salesData));
+    localStorage.setItem('earningsHours', JSON.stringify(hoursData));
+  } catch(e) {}
+}
+function restore() {
+  try {
+    salesData = JSON.parse(localStorage.getItem('earningsSales') || '[]');
+    hoursData = JSON.parse(localStorage.getItem('earningsHours') || '[]');
+  } catch(e) { salesData = []; hoursData = []; }
+}
+
+function clearAll() {
+  if (!salesData.length && !hoursData.length) return;
+  if (!confirm('Удалить ВСЕ данные (и продажи, и часы)?')) return;
+  salesData = []; hoursData = [];
+  persist(); render();
+}
+
+// ========================
+//  EXCEL — ЗАГРУЗКА
 // ========================
 function loadExcel() { document.getElementById('fileInput').click(); }
 
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
   const reader = new FileReader();
   reader.onload = evt => {
     try {
       const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: 0 });
+      const newSales = [];
+      const newHours = [];
 
-      const newData = [];
-      rows.forEach(row => {
-        let client = '', hours = 0, sales = 0, type = null;
-        for (const key in row) {
-          const k = key.toLowerCase().trim();
-          const v = row[key];
-          if (k.includes('тип') || k === 'type')
-            type = String(v).toLowerCase().includes('прод') || String(v).toLowerCase()==='sales' ? 'sales' : 'hours';
-          else if (k.includes('клиент') || k.includes('client') || k.includes('name'))
-            client = String(v).trim();
-          else if (k.includes('час') || k.includes('hour'))
-            hours = parseFloat(v) || 0;
-          else if (k.includes('продаж') || k.includes('sales') || k.includes('сумма'))
-            sales = parseFloat(v) || 0;
-        }
-        if (!type) type = sales > 0 ? 'sales' : 'hours';
-        if (client || hours || sales) newData.push({ type, client: client || '—', hours, sales });
+      // --- Определяем листы ---
+      // Ищем лист продаж (Подключения / Продажи) и лист часов (часы/внедрения/Логистика)
+      let salesSheetName = null, hoursSheetName = null;
+      wb.SheetNames.forEach(name => {
+        const n = name.toLowerCase();
+        if (n.includes('подключ') || n.includes('продаж')) salesSheetName = name;
+        else if (n.includes('час') || n.includes('внедрен')) hoursSheetName = name;
       });
 
-      if (!newData.length) {
-        alert('Не удалось распознать данные.\nОжидаются колонки: Клиент, Часы и/или Продажи');
+      // Fallback: если не нашли — берём 1-й и 2-й листы
+      if (!salesSheetName && wb.SheetNames[0]) salesSheetName = wb.SheetNames[0];
+      if (!hoursSheetName && wb.SheetNames[1]) hoursSheetName = wb.SheetNames[1];
+
+      // --- Читаем лист продаж ---
+      if (salesSheetName) {
+        const ws = wb.Sheets[salesSheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        // Ищем строку заголовков (обычно первая непустая)
+        let headerRow = 0;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].some(v => String(v).trim())) { headerRow = i; break; }
+        }
+        const headers = rows[headerRow].map(h => String(h).toLowerCase());
+        const colOrg = headers.findIndex(h => h.includes('организац') || h.includes('назван') || h.includes('клиент'));
+        const colSum = headers.findIndex(h => h.includes('сумм') || h.includes('оплат'));
+        const colProduct = headers.findIndex(h => h.includes('продукт'));
+
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || r.every(v => !String(v).trim())) continue;
+          const org = colOrg >= 0 ? String(r[colOrg] || '').trim() : '';
+          const sumStr = colSum >= 0 ? String(r[colSum] || '') : '';
+          if (org.toLowerCase().includes('итого')) continue;
+          if (!org && !sumStr) continue;
+
+          // Разделяем org и ИНН/КПП, если они в одной ячейке
+          let inn = '', kpp = '', orgClean = org;
+          // пример: 'ООО "ТД Премьер Айс" 5001051656-500101001'
+          const m = org.match(/(.+?)\s+([\d]{10,12})-([\d]{9,11})\s*$/);
+          if (m) {
+            orgClean = m[1].trim();
+            inn = m[2];
+            kpp = m[3];
+          } else {
+            const m2 = org.match(/(.+?)\s+([\d]{10,12})\s*$/);
+            if (m2) { orgClean = m2[1].trim(); inn = m2[2]; }
+          }
+
+          const sum = parseFloat(String(sumStr).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+          if (!orgClean) continue;
+          newSales.push({ org: orgClean, inn, kpp, sum, product: colProduct >= 0 ? String(r[colProduct] || '').trim() : '' });
+        }
+      }
+
+      // --- Читаем лист часов ---
+      if (hoursSheetName) {
+        const ws = wb.Sheets[hoursSheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        let headerRow = 0;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].some(v => String(v).trim())) { headerRow = i; break; }
+        }
+        const headers = rows[headerRow].map(h => String(h).toLowerCase());
+        const colOrg    = headers.findIndex(h => h.includes('организац') || h.includes('назван'));
+        const colInn    = headers.findIndex(h => h === 'инн' || h.includes('инн'));
+        const colKpp    = headers.findIndex(h => h.includes('кпп'));
+        const colStage  = headers.findIndex(h => h.includes('этап'));
+        const colStatus = headers.findIndex(h => h.includes('стади') || h.includes('внедрен'));
+        const colHours  = headers.findIndex(h => h.includes('час'));
+        const colLink   = headers.findIndex(h => h.includes('ссылк') || h.includes('ютрек') || h.includes('yt'));
+
+        for (let i = headerRow + 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || r.every(v => !String(v).trim())) continue;
+          const org = colOrg >= 0 ? String(r[colOrg] || '').trim() : '';
+          if (!org) continue;
+          if (org.toLowerCase().includes('итого')) continue;
+
+          const hoursVal = colHours >= 0 ? parseFloat(String(r[colHours] || '').replace(',', '.')) : 0;
+          if (!hoursVal) continue;
+
+          newHours.push({
+            org,
+            inn:    colInn    >= 0 ? String(r[colInn]    || '').trim() : '',
+            kpp:    colKpp    >= 0 ? String(r[colKpp]    || '').trim() : '',
+            stage:  colStage  >= 0 ? String(r[colStage]  || '').trim() : '',
+            status: colStatus >= 0 ? String(r[colStatus] || '').trim() : '',
+            hours:  hoursVal,
+            link:   colLink   >= 0 ? String(r[colLink]   || '').trim() : ''
+          });
+        }
+      }
+
+      if (!newSales.length && !newHours.length) {
+        alert('Не удалось распознать данные.\nПроверьте, что в файле есть лист с продажами и лист с часами.');
         return;
       }
-      if (!confirm(`Найдено ${newData.length} записей. Заменить текущие данные?`)) return;
-      data = newData; persist(); render();
-      alert('Загружено ' + data.length + ' записей.');
+
+      const msg = `Найдено:\n• Продажи: ${newSales.length} записей\n• Часы: ${newHours.length} записей\n\nЗаменить текущие данные?`;
+      if (!confirm(msg)) return;
+
+      salesData = newSales;
+      hoursData = newHours;
+      persist();
+      render();
+      alert('Загрузка завершена.');
     } catch (err) {
       alert('Ошибка при чтении файла: ' + err.message);
     }
@@ -412,40 +584,88 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
   reader.readAsArrayBuffer(file);
 });
 
+// ========================
+//  EXCEL — СОХРАНЕНИЕ
+// ========================
 function saveExcel() {
-  if (!data.length) { alert('Нет данных для сохранения'); return; }
-  const exportRows = data.map(r => {
-    const { gross, net } = calcRecord(r);
+  if (!salesData.length && !hoursData.length) {
+    alert('Нет данных для сохранения');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+
+  // Лист продаж
+  const salesRows = salesData.map(r => {
+    const { gross, net } = calcSale(r.sum);
     return {
-      'Тип': r.type === 'hours' ? 'Часы' : 'Продажи',
-      'Клиент': r.client,
-      'Часы': r.hours || 0,
-      'Продажи': r.sales || 0,
-      'До вычета 13%': Math.round(gross * 100) / 100,
-      'После вычета 13%': Math.round(net * 100) / 100
+      'Название организации ИНН/КПП': (r.inn ? r.org + ' ' + r.inn + (r.kpp ? '-' + r.kpp : '') : r.org),
+      'Сумма оплаты': r.sum,
+      'Продукт': r.product || '',
+      'Заработок до 13%': Math.round(gross * 100) / 100,
+      'Заработок после 13%': Math.round(net * 100) / 100
     };
   });
+  const sT = totals();
+  salesRows.push({});
+  salesRows.push({
+    'Название организации ИНН/КПП': 'ИТОГО',
+    'Сумма оплаты': salesData.reduce((a, r) => a + (+r.sum || 0), 0),
+    'Заработок до 13%': Math.round(sT.salesGross * 100) / 100,
+    'Заработок после 13%': Math.round(sT.salesNet * 100) / 100
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(salesRows), 'Подключения');
 
-  const sumGross = data.reduce((a, r) => a + calcRecord(r).gross, 0);
-  const sumNet = data.reduce((a, r) => a + calcRecord(r).net, 0);
-  exportRows.push({});
-  exportRows.push({ 'Тип': 'ИТОГО', 'До вычета 13%': Math.round(sumGross*100)/100, 'После вычета 13%': Math.round(sumNet*100)/100 });
+  // Лист часов
+  const hoursRows = hoursData.map(r => {
+    const { gross, net } = calcHours(r.hours);
+    return {
+      'Название организации': r.org,
+      'ИНН': r.inn || '',
+      'КПП': r.kpp || '',
+      'Этап': r.stage || '',
+      'Стадия внедрения': r.status || '',
+      'Кол-во часов по ютреку': r.hours,
+      'Ссылка ютрек': r.link || '',
+      'Заработок до 13%': Math.round(gross * 100) / 100,
+      'Заработок после 13%': Math.round(net * 100) / 100
+    };
+  });
+  hoursRows.push({});
+  hoursRows.push({
+    'Название организации': 'ИТОГО',
+    'Кол-во часов по ютреку': hoursData.reduce((a, r) => a + (+r.hours || 0), 0),
+    'Заработок до 13%': Math.round(sT.hoursGross * 100) / 100,
+    'Заработок после 13%': Math.round(sT.hoursNet * 100) / 100
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hoursRows), 'Логистика часы внедрения');
 
-  const ws = XLSX.utils.json_to_sheet(exportRows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Заработок');
+  // Сводный лист
+  const summaryRows = [
+    { 'Показатель': 'Продажи — до 13%',          'Сумма': Math.round(sT.salesGross * 100) / 100 },
+    { 'Показатель': 'Продажи — после 13%',       'Сумма': Math.round(sT.salesNet * 100) / 100 },
+    { 'Показатель': 'Часы — до 13%',             'Сумма': Math.round(sT.hoursGross * 100) / 100 },
+    { 'Показатель': 'Часы — после 13%',          'Сумма': Math.round(sT.hoursNet * 100) / 100 },
+    { 'Показатель': 'ОБЩИЙ ИТОГ — до 13%',       'Сумма': Math.round(sT.allGross * 100) / 100 },
+    { 'Показатель': 'ОБЩИЙ ИТОГ — на руки',      'Сумма': Math.round(sT.allNet * 100) / 100 }
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), 'Итого');
+
   XLSX.writeFile(wb, 'заработок_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 // ========================
 //  СОБЫТИЯ
 // ========================
-document.getElementById('inpType').addEventListener('change', toggleTypeFields);
 document.getElementById('overlay').addEventListener('click', e => {
   if (e.target.id === 'overlay') closeModal();
 });
 
-render();
+// ========================
+//  СТАРТ
+// ========================
+restore();
+setTab('sales');
 </script>
 </body>
 </html>
